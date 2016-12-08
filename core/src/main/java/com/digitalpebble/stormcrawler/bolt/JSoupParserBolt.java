@@ -20,17 +20,38 @@ package com.digitalpebble.stormcrawler.bolt;
 import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -47,6 +68,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Node;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
 
 import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
@@ -128,7 +152,8 @@ public class JSoupParserBolt extends StatusEmitterBolt {
         byte[] content = tuple.getBinaryByField("content");
         String url = tuple.getStringByField("url");
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-
+        Element body;
+        String bodyString="";
         LOG.info("Parsing : starting {}", url);
 
         // check that its content type is HTML
@@ -242,9 +267,12 @@ public class JSoupParserBolt extends StatusEmitterBolt {
                 }
             }
 
-            Element body = jsoupDoc.body();
+             body = jsoupDoc.body();
+        
+           
             if (body != null) {
                 text = body.text();
+                bodyString =  body.html().toString();
             }
 
         } catch (Throwable e) {
@@ -323,7 +351,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
-
+        postData(bodyString);
         for (Map.Entry<String, ParseData> doc : parse) {
             ParseData parseDoc = doc.getValue();
 
@@ -336,6 +364,49 @@ public class JSoupParserBolt extends StatusEmitterBolt {
         collector.ack(tuple);
         eventCounter.scope("tuple_success").incr();
     }
+ 
+    private void postData(String bodyString){
+
+    	 HttpClient httpclient = HttpClients.createDefault();
+    	    HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
+
+    
+    	   
+    	    	StringEntity myEntity = new StringEntity(bodyString, 
+    	    			   ContentType.create("text/plain", "UTF-8"));
+    	    	httppost.setEntity(myEntity);
+			
+			
+
+    	    //Execute and get the response.
+    	    HttpResponse response;
+    	    HttpEntity entity =null;
+			try {
+				response = httpclient.execute(httppost);
+				entity = response.getEntity();
+			} catch (ClientProtocolException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	    
+
+    	    if (entity != null) {
+    	        InputStream instream;
+				try {
+					instream = entity.getContent();
+					 instream.close();
+				} catch (UnsupportedOperationException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+    	       
+    	        
+    	    }
+    }
+   
 
     private void handleException(String url, Throwable e, Metadata metadata,
             Tuple tuple, String errorSource, String errorMessage) {

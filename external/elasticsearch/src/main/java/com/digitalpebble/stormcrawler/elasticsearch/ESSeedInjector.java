@@ -26,6 +26,7 @@ import com.digitalpebble.stormcrawler.util.StringTabScheme;
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
+import redis.clients.jedis.Jedis;
 
 /**
  * Topology which reads from files containing seed URLs and distributes to an ES
@@ -34,6 +35,12 @@ import org.apache.storm.tuple.Fields;
 public class ESSeedInjector extends ConfigurableTopology {
 
     public static void main(String[] args) throws Exception {
+    	// Jedis jedis = new Jedis("127.0.0.1",6379);
+    	// jedis.set("foo", "bar");
+    	// String value = jedis.get("foo");
+        // System.out.println("Connection to server sucessfully");
+         //check whether server is running or not
+        // System.out.println("Server is running: "+jedis.ping());
         ConfigurableTopology.start(new ESSeedInjector(), args);
     }
 
