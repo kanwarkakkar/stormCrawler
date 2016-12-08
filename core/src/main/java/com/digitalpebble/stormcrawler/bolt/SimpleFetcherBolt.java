@@ -54,6 +54,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import crawlercommons.robots.BaseRobotRules;
+import redis.clients.jedis.Jedis;
 import crawlercommons.domains.PaidLevelDomain;
 
 /**
@@ -80,7 +81,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     private ProtocolFactory protocolFactory;
 
     private int taskID = -1;
-
+    private Jedis jedis ;
     private boolean allowRedirs;
 
     boolean sitemapsAutoDiscovery = false;
@@ -119,6 +120,8 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
+    	jedis = new Jedis("localhost",6379);
+    	
         super.prepare(stormConf, context, collector);
         this.conf = new Config();
         this.conf.putAll(stormConf);
@@ -204,12 +207,18 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
         Metadata metadata = null;
 
         if (input.contains("metadata"))
+        {
             metadata = (Metadata) input.getValueByField("metadata");
+          
+     
+        
+        }
+                
         if (metadata == null)
             metadata = Metadata.empty;
 
         URL url;
-
+     
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
@@ -296,6 +305,52 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
                 }
             }
 
+            if (input.contains("metadata"))
+            {
+                metadata = (Metadata) input.getValueByField("metadata");
+                String[] hostUrl = metadata.getValues("url.path");
+                if(hostUrl != null)
+                { 
+                	String host = hostUrl[0];
+                	URL u;
+    				try {
+    					u = new URL(host);
+    					host = u.getHost();
+    				} catch (MalformedURLException e) {
+    					// TODO Auto-generated catch block
+    					e.printStackTrace();
+    				}
+                	
+    				
+    				
+    				String urlCountStr = jedis.get(host);
+    				if(urlCountStr == null)
+    				{
+    					jedis.set(host,"1");
+    				}else
+    				{
+    					jedis.incrBy(host, 1);
+    				}
+                    String urlCOunt = jedis.get(host);
+                    
+                    if(Integer.parseInt(urlCOunt)>10)
+                    {
+                    	jedis.incrBy(host, 1);
+                         metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
+                         collector.emit(
+                                 com.digitalpebble.stormcrawler.Constants.StatusStreamName,
+                                 input, new Values(urlString, metadata, Status.ERROR));
+                         collector.ack(input);
+                         return;
+                    }
+                    
+                }
+         
+            
+            }
+         
+            
+            
             LOG.debug("[Fetcher #{}] : Fetching {}", taskID, urlString);
 
             long start = System.currentTimeMillis();
