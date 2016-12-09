@@ -196,6 +196,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     public void execute(Tuple input) {
 
         String urlString = input.getStringByField("url");
+        String host=null;
         if (StringUtils.isBlank(urlString)) {
             LOG.info("[Fetcher #{}] Missing value for field url in tuple {}",
                     taskID, input);
@@ -311,7 +312,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
                 String[] hostUrl = metadata.getValues("url.path");
                 if(hostUrl != null)
                 { 
-                	String host = hostUrl[0];
+                	host = hostUrl[0];
                 	URL u;
     				try {
     					u = new URL(host);
@@ -373,6 +374,13 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
                     taskID, urlString, response.getStatusCode(), timeFetching,
                     timeWaiting);
 
+            if(response.getStatusCode()  != 200)
+            {
+            	jedis.decrBy(host,1);
+            }
+            
+            
+            
             response.getMetadata().setValue("fetch.statusCode",
                     Integer.toString(response.getStatusCode()));
 
@@ -384,6 +392,8 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
             // determine the status based on the status code
             final Status status = Status.fromHTTPCode(response.getStatusCode());
 
+            
+           
             // used when sending to status stream
             final Values values4status = new Values(urlString,
                     response.getMetadata(), status);
