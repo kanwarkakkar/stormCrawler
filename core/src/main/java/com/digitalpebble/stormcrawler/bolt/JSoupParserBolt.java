@@ -268,11 +268,12 @@ public class JSoupParserBolt extends StatusEmitterBolt {
             }
 
              body = jsoupDoc.body();
-        
+             bodyString = "<document_URL>"+ url+"</document_URL>\n";
+             bodyString = bodyString + jsoupDoc.html().toString();
            
             if (body != null) {
                 text = body.text();
-                bodyString =  body.html().toString();
+               
             }
 
         } catch (Throwable e) {
@@ -368,7 +369,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     private void postData(String bodyString){
 
     	 HttpClient httpclient = HttpClients.createDefault();
-    	    HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
+    	    HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
 
     
     	   
