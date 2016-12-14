@@ -31,10 +31,10 @@ config:
    - isSitemap
    - isFeed
 
-  http.agent.name: "Anonymous Coward"
+  http.agent.name: "botrobin"
   http.agent.version: "1.0"
-  http.agent.description: "A StormCrawler-based crawler"
-  http.agent.url: "http://someorganization.com/"
+  http.agent.description: "Robin's crawler"
+  http.agent.url: "http://smarter.codes/bot-robin/"
   http.agent.email: "someone@someorganization.com"
   # http.robots.agents:"x"
   sitemap.sniffContent: true
@@ -46,7 +46,7 @@ config:
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}
 
   #parsefilters.config.file: "parsefilters.json"
-  #urlfilters.config.file: "urlfilters.json"
+  urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
