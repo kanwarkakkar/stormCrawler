@@ -332,9 +332,9 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     				{
     					jedis.incrBy(host, 1);
     				}
-                    String urlCOunt = jedis.get(host);
+                    String urlCount = jedis.get(host);
                     
-                    if(Integer.parseInt(urlCOunt)>10000)
+                    if(Integer.parseInt(urlCount)> 50)
                     {
                     	jedis.incrBy(host, 1);
                          metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
