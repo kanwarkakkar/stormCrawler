@@ -17,6 +17,8 @@
 
 package com.digitalpebble.stormcrawler.bolt;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -56,6 +58,19 @@ import com.google.common.cache.CacheBuilder;
 import crawlercommons.robots.BaseRobotRules;
 import redis.clients.jedis.Jedis;
 import crawlercommons.domains.PaidLevelDomain;
+
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 
 /**
  * A single-threaded fetcher with no internal queue. Use of this fetcher
@@ -334,7 +349,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     				}
                     String urlCount = jedis.get(host);
                     
-                    if(Integer.parseInt(urlCount)> 50)
+                    if(Integer.parseInt(urlCount)> 150)
                     {
                     	jedis.incrBy(host, 1);
                          metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
@@ -376,10 +391,66 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
 
             if(response.getStatusCode()  != 200)
             {
+            	if(host != null)
             	jedis.decrBy(host,1);
             }
             
+
+
+            if(response.getStatusCode() != 200 && response.getStatusCode() != 301 && response.getStatusCode() != 302)
+            {
+            	String hostUrl = "";
+            	if(host == null)
+            	{
+            	
+            	   if (input.contains("metadata"))
+                   {
+                       metadata= (Metadata) input.getValueByField("metadata");
+                       hostUrl = metadata.getValues("hostname")[0];
+                   }
+            	}else
+            		hostUrl = host;
+         
+            	String bodyString = urlString + "!@#$" + hostUrl;
+            	 HttpClient httpclient = HttpClients.createDefault();
+            	 // HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
+            	HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/"+Integer.toString(response.getStatusCode())+"");
             
+            	   
+            	    	StringEntity myEntity = new StringEntity(bodyString, 
+            	    			   ContentType.create("text/plain", "UTF-8"));
+            	    	httppost.setEntity(myEntity);
+        			
+        			
+
+            	    //Execute and get the response.
+            	    HttpResponse response1;
+            	    HttpEntity entity =null;
+        			try {
+        				response1 = httpclient.execute(httppost);
+        				entity = response1.getEntity();
+        			} catch (ClientProtocolException e) {
+        				// TODO Auto-generated catch block
+        				e.printStackTrace();
+        			} catch (IOException e) {
+        				// TODO Auto-generated catch block
+        				e.printStackTrace();
+        			}
+            	    
+
+            	    if (entity != null) {
+            	        InputStream instream;
+        				try {
+        					instream = entity.getContent();
+        					 instream.close();
+        				} catch (UnsupportedOperationException | IOException e) {
+        					// TODO Auto-generated catch block
+        					e.printStackTrace();
+        				}
+            	       
+            	        
+            	    }
+            }
             
             response.getMetadata().setValue("fetch.statusCode",
                     Integer.toString(response.getStatusCode()));

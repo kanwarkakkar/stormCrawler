@@ -38,6 +38,7 @@ config:
   http.agent.email: "someone@someorganization.com"
   # http.robots.agents:"x"
   sitemap.sniffContent: true
+  sitemap.discovery: true
   http.content.limit: -1
   parser.emitOutlinks: true
   # FetcherBolt queue dump : comment out to activate
