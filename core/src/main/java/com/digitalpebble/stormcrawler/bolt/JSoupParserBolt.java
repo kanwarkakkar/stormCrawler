@@ -88,6 +88,8 @@ import com.digitalpebble.stormcrawler.util.RobotsTags;
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
+import redis.clients.jedis.Jedis;
+
 /**
  * Parser for HTML documents only which uses ICU4J to detect the charset
  * encoding. Kindly donated to storm-crawler by shopstyle.com.
@@ -112,7 +114,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     private boolean trackAnchors = true;
 
     private boolean emitOutlinks = true;
-
+    private Jedis jedis ;
     private boolean robots_noFollow_strict = true;
 
     /**
@@ -125,7 +127,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     @Override
     public void prepare(Map conf, TopologyContext context,
             OutputCollector collector) {
-
+    	jedis = new Jedis("localhost",6379);
         super.prepare(conf, context, collector);
 
         eventCounter = context.registerMetric(this.getClass().getSimpleName(),
@@ -152,6 +154,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
         byte[] content = tuple.getBinaryByField("content");
         String url = tuple.getStringByField("url");
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
+       
         Element body;
         String bodyString="";
         LOG.info("Parsing : starting {}", url);
@@ -268,7 +271,18 @@ public class JSoupParserBolt extends StatusEmitterBolt {
             }
 
              body = jsoupDoc.body();
-             bodyString = "<document_URL>"+ url+"</document_URL>\n";
+           String project_id= null;
+           String hostname = null;
+          if(metadata.getValues("hostname") != null){
+        	  hostname = metadata.getValues("hostname")[0];
+          }
+            	
+               
+               if(hostname != null)
+                	 project_id = jedis.hget(hostname,"project_id");
+             
+           
+             bodyString = "<document_URL>"+project_id + "$$$$"  + url+"</document_URL>\n";
              bodyString = bodyString + jsoupDoc.html().toString();
            
             if (body != null) {
