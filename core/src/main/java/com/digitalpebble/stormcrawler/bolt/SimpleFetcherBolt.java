@@ -366,7 +366,16 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
             }
          
             
-            
+            if(urlString.contains("#")){
+            	jedis.hincrBy(host, host, -1);
+            	  metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
+                  collector.emit(
+                          com.digitalpebble.stormcrawler.Constants.StatusStreamName,
+                          input, new Values(urlString, metadata, Status.ERROR));
+                  collector.ack(input);
+                  return;
+            	
+            }
             LOG.debug("[Fetcher #{}] : Fetching {}", taskID, urlString);
 
             long start = System.currentTimeMillis();

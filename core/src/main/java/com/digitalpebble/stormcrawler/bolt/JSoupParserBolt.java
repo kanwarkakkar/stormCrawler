@@ -383,7 +383,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     private void postData(String bodyString){
 
     	 HttpClient httpclient = HttpClients.createDefault();
-    	 HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
+    	 HttpPost httppost = new HttpPost("http://192.168.200.87:5000/polls/standalone/");
     	 //HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
     
     	   
