@@ -10,8 +10,9 @@ config:
   topology.max.spout.pending: 100
   topology.debug: false
 
-  fetcher.threads.number: 50
-
+  fetcher.threads.number: 100
+  fetcher.threads.per.queue: 1
+  redirections.allowed : true
   # mandatory when using Flux
   topology.kryo.register:
     - com.digitalpebble.stormcrawler.Metadata

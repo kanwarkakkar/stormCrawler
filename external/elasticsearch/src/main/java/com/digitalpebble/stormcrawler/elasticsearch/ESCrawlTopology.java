@@ -81,8 +81,8 @@ public class ESCrawlTopology extends ConfigurableTopology {
                 .fieldsGrouping("parse", Constants.StatusStreamName, furl)
                 .fieldsGrouping("indexer", Constants.StatusStreamName, furl);
 
-       // conf.registerMetricsConsumer(MetricsConsumer.class);
-       // conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
+      // conf.registerMetricsConsumer(MetricsConsumer.class);
+      // conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
 
         return submit("crawl", conf, builder);
     }

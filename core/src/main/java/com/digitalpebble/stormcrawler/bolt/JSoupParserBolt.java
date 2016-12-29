@@ -273,7 +273,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
              body = jsoupDoc.body();
            String project_id= null;
            String hostname = null;
-          if(metadata.getValues("hostname") != null){
+           if(metadata.getValues("hostname") != null){
         	  hostname = metadata.getValues("hostname")[0];
           }
             	
@@ -383,8 +383,9 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     private void postData(String bodyString){
 
     	 HttpClient httpclient = HttpClients.createDefault();
-    	 HttpPost httppost = new HttpPost("http://192.168.200.87:5000/polls/standalone/");
+    	 HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
     	 //HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
+    	 //HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
     
     	   
     	    	StringEntity myEntity = new StringEntity(bodyString, 
