@@ -8,6 +8,13 @@
         "ignoreOutsideHost": false,
         "ignoreOutsideDomain": true
       }
-}
+  },
+  {
+    "class": "com.digitalpebble.storm.crawler.filtering.regex.RegexURLFilter",
+    "name": "RegexURLFilter",
+    "params": {
+        "regexFilterFile": "regxFilters.txt"
+      }
+  }
 ]
 }

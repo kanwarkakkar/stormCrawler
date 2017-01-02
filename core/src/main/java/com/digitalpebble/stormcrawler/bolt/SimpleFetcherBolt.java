@@ -484,7 +484,10 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
             }
 
         } catch (Exception exece) {
-
+        	
+        	if(host != null)
+        		jedis.hincrBy(host, host, -1);
+        	
             String message = exece.getMessage();
             if (message == null)
                 message = "";
