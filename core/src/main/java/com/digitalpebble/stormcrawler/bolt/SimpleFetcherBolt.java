@@ -97,7 +97,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
 
     private int taskID = -1;
     private Jedis jedis ;
-    private boolean allowRedirs;
+ 
 
     boolean sitemapsAutoDiscovery = false;
 
