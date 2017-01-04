@@ -367,11 +367,16 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
          
             
             if(urlString.contains("#")){
-            	jedis.hincrBy(host, host, -1);
+            	if(host != null)
+            	{
+            		if(Integer.parseInt(jedis.hget(host,host)) > -1)
+            			jedis.hincrBy(host, host, -1);
+            	}
+            	
             	  metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
                   collector.emit(
                           com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                          input, new Values(urlString, metadata, Status.ERROR));
+                          input, new Values(urlString, metadata, Status.DISCOVERED));
                   collector.ack(input);
                   return;
             	
@@ -398,15 +403,8 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
                     taskID, urlString, response.getStatusCode(), timeFetching,
                     timeWaiting);
 
-            if(response.getStatusCode()  != 200)
-            {
-            	if(host != null)
-            		jedis.hincrBy(host, host, -1);
-            }
-            
 
-
-            if(response.getStatusCode() != 200 && response.getStatusCode() != 301 && response.getStatusCode() != 302)
+            if(response.getStatusCode() != 200)
             {
             	String hostUrl = "";
             	if(host == null)
@@ -421,6 +419,13 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
             	{
             		hostUrl = host;
             	}
+            	
+            	if(host != null){
+            		if(Integer.parseInt(jedis.hget(host,host)) > -1)
+            			jedis.hincrBy(host, host, -1);
+            	}
+          
+          
             	  String project_id = jedis.hget(hostUrl,"project_id");
             	  postRequestToMeteorIfError(hostUrl,urlString,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
             }
@@ -485,8 +490,6 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
 
         } catch (Exception exece) {
         	
-        	if(host != null)
-        		jedis.hincrBy(host, host, -1);
         	
             String message = exece.getMessage();
             if (message == null)
