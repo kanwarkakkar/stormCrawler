@@ -623,19 +623,18 @@ public class FetcherBolt extends StatusEmitterBolt {
                     		if (fit.t.contains("metadata"))
                            {
                     			  metadata = (Metadata) fit.t.getValueByField("metadata");
-                               hostUrl = metadata.getValues("hostname")[0];
+                    			  hostUrl = metadata.getValues("hostname")[0];
                            }
                     	}else
                     	{
                     		hostUrl = host;
+                    		if(jedis.exists(host)){
+                        		if(Integer.parseInt(jedis.hget(host,host)) > -1)
+                        			jedis.hincrBy(host, host, -1);
+                        		}
                     	}
                     	
-                    	if(host != null){
-                    		if(jedis.exists(host)){
-                    		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
-                    			jedis.hincrBy(hostUrl, hostUrl, -1);
-                    		}
-                    	}
+                    	
                   
                   
                     	  String project_id = jedis.hget(hostUrl,"project_id");
@@ -716,12 +715,13 @@ public class FetcherBolt extends StatusEmitterBolt {
                 	}else
                 	{
                 		hostUrl = host;
+                		if(jedis.exists(host)){
+                    		if(Integer.parseInt(jedis.hget(host,host)) > -1)
+                    			jedis.hincrBy(host, host, -1);
+                    		}
                 	}
                 	
-                	if(host != null){
-                		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
-                			jedis.hincrBy(hostUrl, hostUrl, -1);
-                	}
+               
                 	
                 	
                     String message = exece.getMessage();
