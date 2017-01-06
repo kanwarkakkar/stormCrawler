@@ -18,6 +18,8 @@
 package com.digitalpebble.stormcrawler.bolt;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -35,6 +37,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.IMetric;
 import org.apache.storm.metric.api.MeanReducer;
@@ -57,9 +67,23 @@ import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
 import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
-
+import redis.clients.jedis.Jedis;
 import crawlercommons.robots.BaseRobotRules;
 import crawlercommons.domains.PaidLevelDomain;
+
+
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
@@ -86,7 +110,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     boolean sitemapsAutoDiscovery = false;
 
     private MultiReducedMetric perSecMetrics;
-
+    private Jedis jedis ;
     private File debugfiletrigger;
 
     /** blocks the processing of new URLs if this value is reached **/
@@ -392,6 +416,7 @@ public class FetcherBolt extends StatusEmitterBolt {
         @Override
         public void run() {
             FetchItem fit;
+            String host=null;
             while (true) {
                 fit = fetchQueues.getFetchItem();
                 if (fit == null) {
@@ -420,15 +445,94 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                 if (fit.t.contains("metadata")) {
                     metadata = (Metadata) fit.t.getValueByField("metadata");
+                    
+                    if (fit.t.contains("metadata")) {
+                        metadata = (Metadata) fit.t.getValueByField("metadata");
+                        
+                        String[] hostUrl = metadata.getValues("url.path");
+                        if(hostUrl != null)
+                        { 
+                        	host = hostUrl[0];
+                        	URL u;
+            				try {
+            					u = new URL(host);
+            					host = u.getHost();
+            				} catch (MalformedURLException e) {
+            					// TODO Auto-generated catch block
+            					e.printStackTrace();
+            				}
+                        	
+            				
+            				
+            				String urlCountStr = jedis.hget(host,host);
+            				if(urlCountStr == null)
+            				{
+            					jedis.hset(host, host, "1");
+            				}
+                            String urlCount = jedis.hget(host,host);
+                            String defaultLimit = jedis.get("defaultLimit");
+                            
+                            
+                            if(Integer.parseInt(urlCount)> Integer.parseInt(defaultLimit))
+                            {
+                            	
+                            	 metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
+                                 collector.emit(Constants.StatusStreamName, fit.t,
+                                         new Values(fit.url, metadata, Status.FETCH_ERROR));
+                             
+                                 fetchQueues.finishFetchItem(fit, true);
+                                 activeThreads.decrementAndGet(); // count threads
+                                 // ack it whatever happens
+                                 collector.ack(fit.t);
+                                 continue;
+                            }else
+                            {
+                            	jedis.hincrBy(host, host, 1);
+                            }
+                            
+                        }
+                        
+                        
+                        if(fit.url.contains("#")){
+                        	if(host != null)
+                        	{
+                        		if(jedis.exists(host))
+                        		{
+                        			if(Integer.parseInt(jedis.hget(host,host)) > -1)
+                        				jedis.hincrBy(host, host, -1);
+                        		}
+                        	}
+                        	
+                        	
+                        	 metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
+                              collector.emit(Constants.StatusStreamName, fit.t,
+                                      new Values(fit.url, metadata, Status.FETCH_ERROR));
+                          
+                              fetchQueues.finishFetchItem(fit, true);
+                              activeThreads.decrementAndGet(); // count threads
+                              // ack it whatever happens
+                              collector.ack(fit.t);
+                              continue;
+                        	
+                        }
+                    }
                 }
+                
+                
+              
+                
+                
                 if (metadata == null) {
                     metadata = Metadata.empty;
                 }
-
+         
+                
                 boolean asap = true;
 
                 try {
                     URL URL = new URL(fit.url);
+    
+                 
                     Protocol protocol = protocolFactory.getProtocol(URL);
 
                     if (protocol == null)
@@ -509,6 +613,35 @@ public class FetcherBolt extends StatusEmitterBolt {
                             taskID, fit.url, response.getStatusCode(),
                             timeFetching);
 
+                    
+                    if(response.getStatusCode() != 200)
+                    {
+                    	String hostUrl = "";
+                    	if(host == null)
+                    	{
+                    	
+                    		if (fit.t.contains("metadata"))
+                           {
+                    			  metadata = (Metadata) fit.t.getValueByField("metadata");
+                               hostUrl = metadata.getValues("hostname")[0];
+                           }
+                    	}else
+                    	{
+                    		hostUrl = host;
+                    	}
+                    	
+                    	if(host != null){
+                    		if(jedis.exists(host)){
+                    		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
+                    			jedis.hincrBy(hostUrl, hostUrl, -1);
+                    		}
+                    	}
+                  
+                  
+                    	  String project_id = jedis.hget(hostUrl,"project_id");
+                    	  postRequestToMeteorIfError(hostUrl,fit.url,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
+                    }
+                    
                     response.getMetadata().setValue("fetch.statusCode",
                             Integer.toString(response.getStatusCode()));
 
@@ -570,6 +703,27 @@ public class FetcherBolt extends StatusEmitterBolt {
                     }
 
                 } catch (Exception exece) {
+                	
+                	String hostUrl = "";
+                	if(host == null)
+                	{
+                	
+                		if (fit.t.contains("metadata"))
+                       {
+                			  metadata = (Metadata) fit.t.getValueByField("metadata");
+                           hostUrl = metadata.getValues("hostname")[0];
+                       }
+                	}else
+                	{
+                		hostUrl = host;
+                	}
+                	
+                	if(host != null){
+                		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
+                			jedis.hincrBy(hostUrl, hostUrl, -1);
+                	}
+                	
+                	
                     String message = exece.getMessage();
                     if (message == null)
                         message = "";
@@ -609,6 +763,50 @@ public class FetcherBolt extends StatusEmitterBolt {
 
         }
     }
+    
+    
+    private void postRequestToMeteorIfError(String hostUrl,String urlString,String project_id,String responseCode){
+
+    	String bodyString = urlString + "!@#$" + hostUrl + "####"+ project_id;
+    	 HttpClient httpclient = HttpClients.createDefault();
+    	 // HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
+    	HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/"+responseCode+"");
+    
+    	   
+    	    	StringEntity myEntity = new StringEntity(bodyString, 
+    	    			   ContentType.create("text/plain", "UTF-8"));
+    	    	httppost.setEntity(myEntity);
+			
+			
+
+    	    //Execute and get the response.
+    	    HttpResponse response1;
+    	    HttpEntity entity =null;
+			try {
+				response1 = httpclient.execute(httppost);
+				entity = response1.getEntity();
+			} catch (ClientProtocolException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	    
+
+    	    if (entity != null) {
+    	        InputStream instream;
+				try {
+					instream = entity.getContent();
+					 instream.close();
+				} catch (UnsupportedOperationException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+    	       
+    	        
+    	    }
+    }
 
     private void checkConfiguration(Config stormConf) {
 
@@ -628,7 +826,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
-
+      	jedis = new Jedis("localhost",6379);
         super.prepare(stormConf, context, collector);
 
         Config conf = new Config();

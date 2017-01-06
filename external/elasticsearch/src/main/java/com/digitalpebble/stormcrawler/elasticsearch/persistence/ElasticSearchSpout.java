@@ -199,6 +199,7 @@ public class ElasticSearchSpout extends AbstractSpout {
         SearchRequestBuilder srb = client
                 .prepareSearch(indexName)
                 .setTypes(docType)
+                //.addSort("inComingLinksCount", SortOrder.DESC)
                 // expensive as it builds global Term/Document Frequencies
                 // TODO look for a more appropriate method
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)

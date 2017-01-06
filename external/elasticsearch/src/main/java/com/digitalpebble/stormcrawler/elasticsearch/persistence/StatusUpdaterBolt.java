@@ -19,9 +19,13 @@ package com.digitalpebble.stormcrawler.elasticsearch.persistence;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.StringUtils;
@@ -47,6 +51,7 @@ import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.URLPartitioner;
+import redis.clients.jedis.Jedis;
 
 /**
  * Simple bolt which stores the status of URLs into ElasticSearch. Takes the
@@ -65,7 +70,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private static final String ESStatusDocTypeParamName = "es.status.doc.type";
     private static final String ESStatusRoutingParamName = "es.status.routing";
     private static final String ESStatusRoutingFieldParamName = "es.status.routing.fieldname";
-
+    private Jedis jedis ;
     private boolean routingFieldNameInMetadata = false;
 
     private String indexName;
@@ -91,9 +96,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
-
+    	  jedis = new Jedis("localhost",6379);
         super.prepare(stormConf, context, collector);
-
+      
         indexName = ConfUtils.getString(stormConf,
                 StatusUpdaterBolt.ESStatusIndexNameParamName, "status");
         docType = ConfUtils.getString(stormConf,
@@ -152,7 +157,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
                             StatusUpdaterBolt.super.ack(x, id);
                         }
                     } else {
-                        LOG.warn("Could not find unacked tuple for {}", id);
+                       // LOG.warn("Could not find unacked tuple for {}", id);
                     }
                 }
 
@@ -180,7 +185,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
                             StatusUpdaterBolt.super._collector.fail(x);
                         }
                     } else {
-                        LOG.warn("Could not find unacked tuple for {}", id);
+                     //   LOG.warn("Could not find unacked tuple for {}", id);
                     }
                 }
             }
@@ -236,6 +241,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         builder.field("url", url);
         builder.field("status", status);
 
+        if(url.contains("pricing_faq-sitemap.xml"))
+        {
+        	System.out.println("k");
+        }
         // check that we don't overwrite an existing entry
         // When create is used, the index operation will fail if a document
         // by that id already exists in the index.
@@ -250,7 +259,42 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             mdKey = mdKey.replaceAll("\\.", "%2E");
             builder.array(mdKey, values);
         }
-
+        
+       // Kanwar Adding new fields inComingLinks and inComingLinksCount
+//        Boolean checkKeyExists =  jedis.exists(url);
+//        String[] urlsInComing = metadata.getValues("url.path");
+//        if(urlsInComing != null)
+//        {
+//	        String urlToAppend = urlsInComing[urlsInComing.length -1];
+//	        if(!checkKeyExists){
+//	        	 if(urlToAppend != null)
+//	             	jedis.rpush(url, urlToAppend);
+//	        }else
+//	        {
+//	        	 List<String> urlsInComingList= jedis.lrange(url, 0, -1);
+//	          	 urlsInComingList.add(urlToAppend);
+//	        	 Set<String> hs = new HashSet<>();
+//	        	 
+//	        	 hs.addAll(urlsInComingList);
+//	        	 urlsInComingList.clear();
+//	        	 urlsInComingList.addAll(hs);
+//	        	 
+//	        	 
+//	      
+//	        	String[] urlsArray = urlsInComingList.toArray(new String[urlsInComingList.size()]);
+//	        
+//	        	jedis.del(url);
+//	        	for(int i = 0 ; i < urlsArray.length; i++){
+//	        		jedis.rpush(url, urlsArray[i]);
+//	        	}
+//	        	
+//	        	
+//	        }
+//	        List<String> urlsInComingListToAppend = jedis.lrange(url, 0, -1);
+//	        builder.array("inComingLinks",urlsInComingListToAppend.toArray(new String[urlsInComingListToAppend.size()]));
+//	        builder.field("inComingLinksCount", Integer.toString(urlsInComingListToAppend.size()));
+//        }
+       
         // store routing key in metadata?
         if (StringUtils.isNotBlank(partitionKey)
                 && StringUtils.isNotBlank(fieldNameForRoutingKey)

@@ -349,7 +349,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     				}
                     String urlCount = jedis.hget(host,host);
                     
-                    if(Integer.parseInt(urlCount)> 50)
+                    if(Integer.parseInt(urlCount)> 5000000)
                     {
                     	jedis.hincrBy(host, host, 1);
                          metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
@@ -427,7 +427,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
           
           
             	  String project_id = jedis.hget(hostUrl,"project_id");
-            	  postRequestToMeteorIfError(hostUrl,urlString,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
+            	  //postRequestToMeteorIfError(hostUrl,urlString,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
             }
             
             response.getMetadata().setValue("fetch.statusCode",
