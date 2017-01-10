@@ -108,9 +108,10 @@ public class FetcherBolt extends StatusEmitterBolt {
     private int taskID = -1;
 
     boolean sitemapsAutoDiscovery = false;
-
-    private MultiReducedMetric perSecMetrics;
     private Jedis jedis ;
+    private MultiReducedMetric perSecMetrics;
+   // private JedisPool Pool;
+ 
     private File debugfiletrigger;
 
     /** blocks the processing of new URLs if this value is reached **/
@@ -442,81 +443,16 @@ public class FetcherBolt extends StatusEmitterBolt {
                         fit.url);
 
                 Metadata metadata = null;
-
+               
                 if (fit.t.contains("metadata")) {
                     metadata = (Metadata) fit.t.getValueByField("metadata");
                     
-                    if (fit.t.contains("metadata")) {
-                        metadata = (Metadata) fit.t.getValueByField("metadata");
-                        
-                        String[] hostUrl = metadata.getValues("url.path");
-                        if(hostUrl != null)
-                        { 
-                        	host = hostUrl[0];
-                        	URL u;
-            				try {
-            					u = new URL(host);
-            					host = u.getHost();
-            				} catch (MalformedURLException e) {
-            					// TODO Auto-generated catch block
-            					e.printStackTrace();
-            				}
-                        	
-            				
-            				
-            				String urlCountStr = jedis.hget(host,host);
-            				if(urlCountStr == null)
-            				{
-            					jedis.hset(host, host, "1");
-            				}
-                            String urlCount = jedis.hget(host,host);
-                            String defaultLimit = jedis.get("defaultLimit");
-                            
-                            
-                            if(Integer.parseInt(urlCount)> Integer.parseInt(defaultLimit))
-                            {
-                            	
-                            	 metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
-                                 collector.emit(Constants.StatusStreamName, fit.t,
-                                         new Values(fit.url, metadata, Status.FETCH_ERROR));
-                             
-                                 fetchQueues.finishFetchItem(fit, true);
-                                 activeThreads.decrementAndGet(); // count threads
-                                 // ack it whatever happens
-                                 collector.ack(fit.t);
-                                 continue;
-                            }else
-                            {
-                            	jedis.hincrBy(host, host, 1);
-                            }
-                            
-                        }
+                      }
                         
                         
-                        if(fit.url.contains("#")){
-                        	if(host != null)
-                        	{
-                        		if(jedis.exists(host))
-                        		{
-                        			if(Integer.parseInt(jedis.hget(host,host)) > -1)
-                        				jedis.hincrBy(host, host, -1);
-                        		}
-                        	}
-                        	
-                        	
-                        	 metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
-                              collector.emit(Constants.StatusStreamName, fit.t,
-                                      new Values(fit.url, metadata, Status.FETCH_ERROR));
-                          
-                              fetchQueues.finishFetchItem(fit, true);
-                              activeThreads.decrementAndGet(); // count threads
-                              // ack it whatever happens
-                              collector.ack(fit.t);
-                              continue;
-                        	
-                        }
-                    }
-                }
+
+
+          
                 
                 
               
@@ -624,19 +560,21 @@ public class FetcherBolt extends StatusEmitterBolt {
                            {
                     			  metadata = (Metadata) fit.t.getValueByField("metadata");
                     			  hostUrl = metadata.getValues("hostname")[0];
+                    			  if(jedis.exists(hostUrl)){
+                              		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
+                              			jedis.hincrBy(hostUrl, hostUrl, -1);
+                              		}
                            }
                     	}else
                     	{
                     		hostUrl = host;
-                    		if(jedis.exists(host)){
-                        		if(Integer.parseInt(jedis.hget(host,host)) > -1)
-                        			jedis.hincrBy(host, host, -1);
+                    		if(jedis.exists(hostUrl)){
+                        		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
+                        			jedis.hincrBy(hostUrl, hostUrl, -1);
                         		}
+                    	
                     	}
                     	
-                    	
-                  
-                  
                     	  String project_id = jedis.hget(hostUrl,"project_id");
                     	  postRequestToMeteorIfError(hostUrl,fit.url,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
                     }
@@ -711,6 +649,10 @@ public class FetcherBolt extends StatusEmitterBolt {
                        {
                 			  metadata = (Metadata) fit.t.getValueByField("metadata");
                            hostUrl = metadata.getValues("hostname")[0];
+                           if(jedis.exists(hostUrl)){
+                       		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
+                       			jedis.hincrBy(hostUrl, hostUrl, -1);
+                       		}
                        }
                 	}else
                 	{
@@ -826,8 +768,9 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
+      	//Pool = new JedisPool(new JedisPoolConfig(), "localhost");
       	jedis = new Jedis("localhost",6379);
-        super.prepare(stormConf, context, collector);
+      	super.prepare(stormConf, context, collector);
 
         Config conf = new Config();
         conf.putAll(stormConf);

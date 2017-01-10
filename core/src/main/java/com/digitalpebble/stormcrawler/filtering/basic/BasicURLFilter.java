@@ -35,11 +35,14 @@ public class BasicURLFilter implements URLFilter {
 
     public String filter(URL sourceUrl, Metadata sourceMetadata,
             String urlToFilter) {
-
+    	System.out.print("Source URL" + sourceUrl);
+    	System.out.print("URL TO FILTER" + urlToFilter);
+    
+    	
         if (urlToFilter == null) {
             return null;
         }
-
+        
         if (maxLength > 0 && urlToFilter.length() > maxLength) {
             return null;
         }

@@ -21,9 +21,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
+import org.slf4j.LoggerFactory;
+
 import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.bolt.FetcherBolt;
 import com.digitalpebble.stormcrawler.filtering.URLFilter;
 import com.fasterxml.jackson.databind.JsonNode;
+import redis.clients.jedis.Jedis;
 
 import crawlercommons.domains.PaidLevelDomain;
 
@@ -39,16 +43,18 @@ import crawlercommons.domains.PaidLevelDomain;
  * </ul>
  */
 public class HostURLFilter implements URLFilter {
-
+    private static final org.slf4j.Logger LOG = LoggerFactory
+            .getLogger(HostURLFilter.class);
     private boolean ignoreOutsideHost;
     private boolean ignoreOutsideDomain;
-
+    private Jedis jedis ;
     private URL previousSourceUrl;
     private String previousSourceHost;
     private String previousSourceDomain;
 
     @Override
     public void configure(Map stormConf, JsonNode filterParams) {
+    	
         JsonNode filterByHostNode = filterParams.get("ignoreOutsideHost");
         if (filterByHostNode == null) {
             ignoreOutsideHost = false;
@@ -74,10 +80,11 @@ public class HostURLFilter implements URLFilter {
     @Override
     public String filter(URL sourceUrl, Metadata sourceMetadata,
             String urlToFilter) {
-        if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
+    	
+    	if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
             return urlToFilter;
         }
-
+    	jedis = new Jedis("localhost",6379);
         URL tURL;
         try {
             tURL = new URL(urlToFilter);
@@ -118,6 +125,42 @@ public class HostURLFilter implements URLFilter {
                 return null;
             }
         }
+       
+    	if(fromHost != null){
+    		String urlCountStr = jedis.hget(fromHost,fromHost);
+    		if(urlCountStr == null)
+    		{
+    			jedis.hset(fromHost, fromHost, "1");
+    		}
+            String urlCount = jedis.hget(fromHost,fromHost);
+            String defaultLimit = jedis.get("defaultLimit");
+            
+            
+            if(Integer.parseInt(urlCount)> Integer.parseInt(defaultLimit))
+            {
+            	 return null;
+            	
+            }else
+            {
+            	jedis.hincrBy(fromHost, fromHost, 1);
+            }
+            
+        
+    	}
+    	  if(urlToFilter.contains("#")){
+        	  if(fromHost != null){
+    	    	{
+    	    		if(jedis.exists(fromHost))
+    	    		{
+    	    			if(Integer.parseInt(jedis.hget(fromHost,fromHost)) > -1)
+    	    				jedis.hincrBy(fromHost, fromHost, -1);
+    	    		}
+    	    	}
+    	    	 return null;
+        	  }
+    	  }
+    	
+    
 
         return urlToFilter;
     }

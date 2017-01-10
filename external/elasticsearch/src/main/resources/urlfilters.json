@@ -15,6 +15,10 @@
     "params": {
         "regexFilterFile": "regxFilters.txt"
       }
+  },
+   {
+    "class": "com.digitalpebble.stormcrawler.filtering.basic",
+    "name": "BasicURLFilter"
   }
 ]
 }

@@ -381,7 +381,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
-        postData(bodyString);
+       // postData(bodyString);
         for (Map.Entry<String, ParseData> doc : parse) {
             ParseData parseDoc = doc.getValue();
 
@@ -398,7 +398,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
     private void postData(String bodyString){
 
     	 HttpClient httpclient = HttpClients.createDefault();
-    	 HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
+    	 HttpPost httppost = new HttpPost("http://192.168.200.90:8000/polls/standalone/");
     	 //HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
     	// HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
     
