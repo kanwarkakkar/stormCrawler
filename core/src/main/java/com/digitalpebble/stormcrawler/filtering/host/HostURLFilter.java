@@ -125,7 +125,12 @@ public class HostURLFilter implements URLFilter {
                 return null;
             }
         }
-       
+        
+        if(urlToFilter.contains("#")){
+      
+  	    	 return null;
+      	  }
+  	 
     	if(fromHost != null){
     		String urlCountStr = jedis.hget(fromHost,fromHost);
     		if(urlCountStr == null)
@@ -138,6 +143,7 @@ public class HostURLFilter implements URLFilter {
             
             if(Integer.parseInt(urlCount)> Integer.parseInt(defaultLimit))
             {
+            	jedis.close();
             	 return null;
             	
             }else
@@ -147,21 +153,9 @@ public class HostURLFilter implements URLFilter {
             
         
     	}
-    	  if(urlToFilter.contains("#")){
-        	  if(fromHost != null){
-    	    	{
-    	    		if(jedis.exists(fromHost))
-    	    		{
-    	    			if(Integer.parseInt(jedis.hget(fromHost,fromHost)) > -1)
-    	    				jedis.hincrBy(fromHost, fromHost, -1);
-    	    		}
-    	    	}
-    	    	 return null;
-        	  }
-    	  }
     	
-    
-
+    	
+    	jedis.close();
         return urlToFilter;
     }
 

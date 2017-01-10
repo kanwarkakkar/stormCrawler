@@ -296,7 +296,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
                if(hostname != null)
                 	 project_id = jedis.hget(hostname,"project_id");
              
-           
+               jedis.close();
              bodyString = "<document_URL>"+project_id + "$$$$"  + url+"</document_URL>\n";
              bodyString = bodyString + jsoupDoc.html().toString();
            
@@ -381,7 +381,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
-       postData(bodyString);
+       //postData(bodyString);
         for (Map.Entry<String, ParseData> doc : parse) {
             ParseData parseDoc = doc.getValue();
 
