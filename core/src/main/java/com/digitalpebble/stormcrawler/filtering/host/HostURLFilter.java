@@ -144,7 +144,9 @@ public class HostURLFilter implements URLFilter {
             {
             	jedis.hset(fromHost, "foundUrls", "1");
             }
-            jedis.hincrBy(fromHost, "foundUrls", 1);
+            String foundHost = "FOUND" + fromHost;
+            jedis.sadd(foundHost, urlToFilter);
+            jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
             String defaultLimit = jedis.get("defaultLimit");
             if(urlCount > Integer.parseInt(defaultLimit))
             {
