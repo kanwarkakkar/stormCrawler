@@ -1,20 +1,19 @@
 {
-
-  "com.digitalpebble.stormcrawler.filtering.URLFilters": [
-  {
-      "class": "com.digitalpebble.stormcrawler.filtering.host.HostURLFilter",
-      "name": "HostURLFilter",
-      "params": {
-        "ignoreOutsideHost": false,
-        "ignoreOutsideDomain": true
-      }
-  },
-  {
-    "class": "com.digitalpebble.storm.crawler.filtering.regex.RegexURLFilter",
-    "name": "RegexURLFilter",
-    "params": {
-        "regexFilterFile": "regxFilters.txt"
-      }
-  }
-]
+    "com.digitalpebble.stormcrawler.filtering.URLFilters": [
+        {
+            "class": "com.digitalpebble.stormcrawler.filtering.regex.RegexURLFilter",
+            "name": "RegexURLFilter",
+            "params": {
+                "regexFilterFile": "regexFilters.txt"
+            }
+        },
+        {
+            "class": "com.digitalpebble.stormcrawler.filtering.host.HostURLFilter",
+            "name": "HostURLFilter",
+            "params": {
+                "ignoreOutsideHost": false,
+                "ignoreOutsideDomain": true
+            }
+        }
+    ]
 }
