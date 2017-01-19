@@ -864,6 +864,11 @@ public class FetcherBolt extends StatusEmitterBolt {
     }
 
     @Override
+    public void cleanup() {
+        protocolFactory.cleanup();
+    }
+
+    @Override
     public void execute(Tuple input) {
         boolean toomanyurlsinqueues = false;
         do {
