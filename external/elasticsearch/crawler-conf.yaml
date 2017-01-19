@@ -39,6 +39,7 @@ config:
   http.agent.email: "someone@someorganization.com"
   # http.robots.agents:"x"
   sitemap.sniffContent: true
+  sitemap.offset.guess: 500
   sitemap.discovery: true
   http.content.limit: -1
   parser.emitOutlinks: true

@@ -142,7 +142,8 @@ public class HostURLFilter implements URLFilter {
             Integer urlCount = Integer.parseInt(urlCountStr);
             if(urlCount <=1)
             {
-            	jedis.hset(fromHost, "foundUrls", "1");
+            
+            		jedis.hset(fromHost, "foundUrls", "1");
             }
             String foundHost = "FOUND" + fromHost;
             jedis.sadd(foundHost, urlToFilter);
@@ -156,7 +157,8 @@ public class HostURLFilter implements URLFilter {
             	
             }else
             {
-            	jedis.hincrBy(fromHost, fromHost, 1);
+            	if(!urlToFilter.endsWith(".xml"))
+            		jedis.hincrBy(fromHost, fromHost, 1);
             }
             
         
