@@ -645,23 +645,23 @@ public class FetcherBolt extends StatusEmitterBolt {
                 	if(host == null)
                 	{
                 	
-//                		if (fit.t.contains("metadata"))
-//                       {
-//                			  metadata = (Metadata) fit.t.getValueByField("metadata");
-//                           hostUrl = metadata.getValues("hostname")[0];
+             		if (fit.t.contains("metadata"))
+                       {
+                			  metadata = (Metadata) fit.t.getValueByField("metadata");
+                           hostUrl = metadata.getValues("hostname")[0];
 //                           if(jedis.exists(hostUrl)){
 //                       		if(Integer.parseInt(jedis.hget(hostUrl,hostUrl)) > -1)
 //                       			jedis.hincrBy(hostUrl, hostUrl, -1);
 //                       		}
-//                       }
-//                	}else
-//                	{
-//                		hostUrl = host;
+                       }
+                	}else
+                	{
+                		hostUrl = host;
 //                		if(jedis.exists(host)){
 //                    		if(Integer.parseInt(jedis.hget(host,host)) > -1)
 //                    			jedis.hincrBy(host, host, -1);
 //                    		}
-//                	}
+                	}
                 	
                
                 	
