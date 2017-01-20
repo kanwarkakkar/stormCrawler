@@ -73,12 +73,14 @@ config:
   indexer.canonical.name: "canonical"
   indexer.md.mapping:
   - parse.title=title
-  - parse.keywords=keywords
-  - parse.description=description
-  - domain=domain
+  #- parse.keywords=keywords
+  #- parse.description=description
+  #- domain=domain
 
-  # Metrics consumers:
-  #topology.metrics.consumer.register:
-   #  - class: "org.apache.storm.metric.LoggingMetricsConsumer"
-    #   parallelism.hint: 1
+  Metrics consumers:
+  topology.metrics.consumer.register:
+   - class: "org.apache.storm.metric.LoggingMetricsConsumer"
+     parallelism.hint: 1
+     
+     
 

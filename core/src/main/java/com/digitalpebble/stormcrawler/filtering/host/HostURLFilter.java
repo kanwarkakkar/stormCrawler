@@ -132,6 +132,7 @@ public class HostURLFilter implements URLFilter {
       	  }
   	 
     	if(fromHost != null){
+    	
     		String urlCountStr = jedis.hget(fromHost,fromHost);
     		if(urlCountStr == null)
     		{
@@ -148,7 +149,13 @@ public class HostURLFilter implements URLFilter {
             String foundHost = "FOUND" + fromHost;
             jedis.sadd(foundHost, urlToFilter);
             jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
-            String defaultLimit = jedis.get("defaultLimit");
+            
+            
+            if(!jedis.exists("defaultLimit"+fromHost)){
+            	jedis.set("defaultLimit"+fromHost,"10");
+            }
+            String defaultLimit = jedis.get("defaultLimit"+fromHost);
+          
             if(urlCount > Integer.parseInt(defaultLimit))
             {
             	
@@ -161,7 +168,6 @@ public class HostURLFilter implements URLFilter {
             		jedis.hincrBy(fromHost, fromHost, 1);
             }
             
-        
     	}
     	
     	

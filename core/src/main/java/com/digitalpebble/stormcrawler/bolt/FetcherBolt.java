@@ -85,6 +85,8 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 
+import org.asynchttpclient.*;
+import java.util.concurrent.Future;
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
  * politeness and handles the fetching threads itself.
@@ -710,44 +712,53 @@ public class FetcherBolt extends StatusEmitterBolt {
     private void postRequestToMeteorIfError(String hostUrl,String urlString,String project_id,String responseCode){
 
     	String bodyString = urlString + "!@#$" + hostUrl + "####"+ project_id;
-    	 HttpClient httpclient = HttpClients.createDefault();
-    	 // HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
-    	HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/"+responseCode+"");
-    
-    	   
-    	    	StringEntity myEntity = new StringEntity(bodyString, 
-    	    			   ContentType.create("text/plain", "UTF-8"));
-    	    	httppost.setEntity(myEntity);
-			
-			
-
-    	    //Execute and get the response.
-    	    HttpResponse response1;
-    	    HttpEntity entity =null;
-			try {
-				response1 = httpclient.execute(httppost);
-				entity = response1.getEntity();
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    	    
-
-    	    if (entity != null) {
-    	        InputStream instream;
-				try {
-					instream = entity.getContent();
-					 instream.close();
-				} catch (UnsupportedOperationException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-    	       
-    	        
-    	    }
+    	
+    	
+     	
+    	AsyncHttpClient asyncHttpClient = new DefaultAsyncHttpClient();
+    	Future<Response> f = asyncHttpClient.preparePost("http://localhost:3000/ErrorStatusUrls/"+responseCode+"")
+    			.setBody(bodyString)
+    			.execute();
+    	
+    	
+//    	 HttpClient httpclient = HttpClients.createDefault();
+//    	 // HttpPost httppost = new HttpPost("http://192.168.200.87:8000/polls/standalone/");
+//    	HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/"+responseCode+"");
+//    
+//    	   
+//    	    	StringEntity myEntity = new StringEntity(bodyString, 
+//    	    			   ContentType.create("text/plain", "UTF-8"));
+//    	    	httppost.setEntity(myEntity);
+//			
+//			
+//
+//    	    //Execute and get the response.
+//    	    HttpResponse response1;
+//    	    HttpEntity entity =null;
+//			try {
+//				response1 = httpclient.execute(httppost);
+//				entity = response1.getEntity();
+//			} catch (ClientProtocolException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//    	    
+//
+//    	    if (entity != null) {
+//    	        InputStream instream;
+//				try {
+//					instream = entity.getContent();
+//					 instream.close();
+//				} catch (UnsupportedOperationException | IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//    	       
+//    	        
+//    	    }
     }
 
     private void checkConfiguration(Config stormConf) {
