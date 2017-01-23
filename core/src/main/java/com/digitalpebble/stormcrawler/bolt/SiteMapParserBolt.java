@@ -99,6 +99,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                 byte[] clue = "http://www.sitemaps.org/schemas/sitemap/0.9"
                         .getBytes();
                 byte[] beginning = content;
+                
                 if (content.length > maxOffsetGuess && maxOffsetGuess > 0) {
                     beginning = Arrays.copyOfRange(content, 0, maxOffsetGuess);
                 }

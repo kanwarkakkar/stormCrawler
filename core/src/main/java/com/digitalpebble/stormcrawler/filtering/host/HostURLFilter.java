@@ -28,7 +28,8 @@ import com.digitalpebble.stormcrawler.bolt.FetcherBolt;
 import com.digitalpebble.stormcrawler.filtering.URLFilter;
 import com.fasterxml.jackson.databind.JsonNode;
 import redis.clients.jedis.Jedis;
-
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import crawlercommons.domains.PaidLevelDomain;
 
 /**
@@ -43,130 +44,135 @@ import crawlercommons.domains.PaidLevelDomain;
  * </ul>
  */
 public class HostURLFilter implements URLFilter {
-    private static final org.slf4j.Logger LOG = LoggerFactory
-            .getLogger(HostURLFilter.class);
-    private boolean ignoreOutsideHost;
-    private boolean ignoreOutsideDomain;
-    private Jedis jedis ;
-    private URL previousSourceUrl;
-    private String previousSourceHost;
-    private String previousSourceDomain;
+	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(HostURLFilter.class);
+	private boolean ignoreOutsideHost;
+	private boolean ignoreOutsideDomain;
+	private Jedis jedis;
+	private URL previousSourceUrl;
+	private String previousSourceHost;
+	private String previousSourceDomain;
+	private JedisPool pool;
 
-    @Override
-    public void configure(Map stormConf, JsonNode filterParams) {
-    	
-        JsonNode filterByHostNode = filterParams.get("ignoreOutsideHost");
-        if (filterByHostNode == null) {
-            ignoreOutsideHost = false;
-        } else {
-            ignoreOutsideHost = filterByHostNode.asBoolean(false);
-        }
+	@Override
+	public void configure(Map stormConf, JsonNode filterParams) {
+		pool = new JedisPool(new JedisPoolConfig(), "localhost");
 
-        // ignoreOutsideDomain is not necessary if we require the host to be
-        // always the same
-        if (!ignoreOutsideHost) {
-            JsonNode filterByDomainNode = filterParams
-                    .get("ignoreOutsideDomain");
-            if (filterByHostNode == null) {
-                ignoreOutsideDomain = false;
-            } else {
-                ignoreOutsideDomain = filterByDomainNode.asBoolean(false);
-            }
-        } else {
-            ignoreOutsideDomain = false;
-        }
-    }
+		JsonNode filterByHostNode = filterParams.get("ignoreOutsideHost");
+		if (filterByHostNode == null) {
+			ignoreOutsideHost = false;
+		} else {
+			ignoreOutsideHost = filterByHostNode.asBoolean(false);
+		}
 
-    @Override
-    public String filter(URL sourceUrl, Metadata sourceMetadata,
-            String urlToFilter) {
-    	
-    	if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
-            return urlToFilter;
-        }
-    	jedis = new Jedis("localhost",6379);
-        URL tURL;
-        try {
-            tURL = new URL(urlToFilter);
-        } catch (MalformedURLException e1) {
-            return null;
-        }
+		// ignoreOutsideDomain is not necessary if we require the host to be
+		// always the same
+		if (!ignoreOutsideHost) {
+			JsonNode filterByDomainNode = filterParams.get("ignoreOutsideDomain");
+			if (filterByHostNode == null) {
+				ignoreOutsideDomain = false;
+			} else {
+				ignoreOutsideDomain = filterByDomainNode.asBoolean(false);
+			}
+		} else {
+			ignoreOutsideDomain = false;
+		}
+	}
 
-        String fromHost;
-        String fromDomain = null;
-        // Using identity comparison because URL.equals performs poorly
-        if (sourceUrl == previousSourceUrl) {
-            fromHost = previousSourceHost;
-            if (ignoreOutsideDomain) {
-                fromDomain = previousSourceDomain;
-            }
-        } else {
-            fromHost = sourceUrl.getHost();
-            if (ignoreOutsideDomain) {
-                fromDomain = PaidLevelDomain.getPLD(fromHost);
-            }
-            previousSourceHost = fromHost;
-            previousSourceDomain = fromDomain;
-            previousSourceUrl = sourceUrl;
-        }
+	@Override
+	public String filter(URL sourceUrl, Metadata sourceMetadata, String urlToFilter) {
 
-        // resolve the hosts
-        String toHost = tURL.getHost();
+		if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
+			return urlToFilter;
+		}
+		// jedis = new Jedis("localhost",6379);
 
-        if (ignoreOutsideHost) {
-            if (toHost == null || !toHost.equalsIgnoreCase(fromHost)) {
-                return null;
-            }
-        }
+		URL tURL;
+		try {
+			tURL = new URL(urlToFilter);
+		} catch (MalformedURLException e1) {
+			return null;
+		}
 
-        if (ignoreOutsideDomain) {
-            String toDomain = PaidLevelDomain.getPLD(toHost);
-            if (toDomain == null || !toDomain.equals(fromDomain)) {
-                return null;
-            }
-        }
-        
-        if(urlToFilter.contains("#")){
-      
-  	    	 return null;
-      	  }
-  	 
-    	if(fromHost != null){
-    		String urlCountStr = jedis.hget(fromHost,fromHost);
-    		if(urlCountStr == null)
-    		{
-    			jedis.hset(fromHost, fromHost, "1");
-    			urlCountStr = "1";
-    		}
-    		
-            Integer urlCount = Integer.parseInt(urlCountStr);
-            if(urlCount <=1)
-            {
-            
-            		jedis.hset(fromHost, "foundUrls", "1");
-            }
-            String foundHost = "FOUND" + fromHost;
-            jedis.sadd(foundHost, urlToFilter);
-            jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
-            String defaultLimit = jedis.get("defaultLimit");
-            if(urlCount > Integer.parseInt(defaultLimit))
-            {
-            	
-            	jedis.close();
-            	 return null;
-            	
-            }else
-            {
-            	if(!urlToFilter.endsWith(".xml"))
-            		jedis.hincrBy(fromHost, fromHost, 1);
-            }
-            
-        
-    	}
-    	
-    	
-    	jedis.close();
-        return urlToFilter;
-    }
+		String fromHost;
+		String fromDomain = null;
+		// Using identity comparison because URL.equals performs poorly
+		if (sourceUrl == previousSourceUrl) {
+			fromHost = previousSourceHost;
+			if (ignoreOutsideDomain) {
+				fromDomain = previousSourceDomain;
+			}
+		} else {
+			fromHost = sourceUrl.getHost();
+			if (ignoreOutsideDomain) {
+				fromDomain = PaidLevelDomain.getPLD(fromHost);
+			}
+			previousSourceHost = fromHost;
+			previousSourceDomain = fromDomain;
+			previousSourceUrl = sourceUrl;
+		}
+
+		// resolve the hosts
+		String toHost = tURL.getHost();
+
+		if (ignoreOutsideHost) {
+			if (toHost == null || !toHost.equalsIgnoreCase(fromHost)) {
+				return null;
+			}
+		}
+
+		if (ignoreOutsideDomain) {
+			String toDomain = PaidLevelDomain.getPLD(toHost);
+			if (toDomain == null || !toDomain.equals(fromDomain)) {
+				return null;
+			}
+		}
+
+		if (urlToFilter.contains("#")) {
+
+			return null;
+		}
+
+		Jedis jedis = null;
+		try {
+			jedis = pool.getResource();
+			if (fromHost != null) {
+				String urlCountStr = jedis.hget(fromHost, fromHost);
+				if (urlCountStr == null) {
+					jedis.hset(fromHost, fromHost, "1");
+					urlCountStr = "1";
+				}
+
+				Integer urlCount = Integer.parseInt(urlCountStr);
+				if (urlCount <= 1) {
+
+					jedis.hset(fromHost, "foundUrls", "1");
+				}
+				String foundHost = "FOUND" + fromHost;
+				jedis.sadd(foundHost, urlToFilter);
+				jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
+
+				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
+				if (defaultLimitOfCrawl == null) {
+					defaultLimitOfCrawl = "1000";
+				}
+				if (urlCount > Integer.parseInt(defaultLimitOfCrawl)) {
+
+					return null;
+
+				} else {
+					if (!urlToFilter.endsWith(".xml"))
+						jedis.hincrBy(fromHost, fromHost, 1);
+				}
+
+			}
+		} finally {
+			if (jedis != null) {
+				jedis.close();
+			}
+		}
+
+		
+		return urlToFilter;
+	}
 
 }

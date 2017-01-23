@@ -34,12 +34,17 @@ import com.digitalpebble.stormcrawler.elasticsearch.persistence.ElasticSearchSpo
 import com.digitalpebble.stormcrawler.elasticsearch.persistence.StatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
 /**
  * Dummy topology to play with the spouts and bolts on ElasticSearch
  */
 public class ESCrawlTopology extends ConfigurableTopology {
 
+	
     public static void main(String[] args) throws Exception {
+    	
         ConfigurableTopology.start(new ESCrawlTopology(), args);
     }
 

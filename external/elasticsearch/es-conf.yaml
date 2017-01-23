@@ -55,7 +55,7 @@ config:
   
   # AggregationSpout
   es.status.max.buckets: 50
-  es.status.max.urls.per.bucket: 2
+  es.status.max.urls.per.bucket: 10
   # field to group the URLs into buckets
   es.status.bucket.field: "_routing"
   # field to sort the URLs within a bucket

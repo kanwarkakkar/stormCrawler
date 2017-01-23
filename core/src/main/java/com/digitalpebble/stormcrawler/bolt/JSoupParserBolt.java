@@ -90,6 +90,17 @@ import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
 import redis.clients.jedis.Jedis;
+import java.io.IOException;
+import java.nio.CharBuffer;
+import java.util.concurrent.Future;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.nio.IOControl;
+import org.apache.http.nio.client.methods.AsyncCharConsumer;
+import org.apache.http.nio.client.methods.HttpAsyncMethods;
+import org.apache.http.protocol.HttpContext;
 
 /**
  * Parser for HTML documents only which uses ICU4J to detect the charset
@@ -178,6 +189,8 @@ public class JSoupParserBolt extends StatusEmitterBolt {
         // look at value found in HTTP headers
         boolean CT_OK = false;
 
+        
+        
         String mimeType = metadata.getFirstValue(HttpHeaders.CONTENT_TYPE);
 
         if (detectMimeType) {
@@ -383,7 +396,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
-        //postData(bodyString);
+        postData(bodyString);
         for (Map.Entry<String, ParseData> doc : parse) {
             ParseData parseDoc = doc.getValue();
 
@@ -399,45 +412,26 @@ public class JSoupParserBolt extends StatusEmitterBolt {
  
     private void postData(String bodyString){
 
-    	 HttpClient httpclient = HttpClients.createDefault();
-    	HttpPost httppost = new HttpPost("http://192.168.200.90:8000/polls/standalone/");
-    	 //HttpPost httppost = new HttpPost("http://localhost:3010/nutch-seeds");
-    	// HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
-    
-    	   
-    	    	StringEntity myEntity = new StringEntity(bodyString, 
-    	    			   ContentType.create("text/plain", "UTF-8"));
-    	    	httppost.setEntity(myEntity);
-			
-			
-
-    	    //Execute and get the response.
-    	    HttpResponse response;
-    	    HttpEntity entity =null;
-			try {
-				response = httpclient.execute(httppost);
-				entity = response.getEntity();
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+    	 CloseableHttpAsyncClient httpclient = HttpAsyncClients.createDefault();
+         try {
+             httpclient.start();
+             HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
+             //HttpPost httppost = new HttpPost("http://192.168.200.91:8000/polls/standalone/");
+            // HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
+ 	    	 StringEntity myEntity = new StringEntity(bodyString, 
+	    			   ContentType.create("text/plain", "UTF-8"));
+ 	    	 httppost.setEntity(myEntity);
+             httpclient.execute(httppost, null);
+            
+         } finally {
+             try {
+				httpclient.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-    	    
-
-    	    if (entity != null) {
-    	        InputStream instream;
-				try {
-					instream = entity.getContent();
-					 instream.close();
-				} catch (UnsupportedOperationException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-    	       
-    	        
-    	    }
+         }
+        
     }
    
 
