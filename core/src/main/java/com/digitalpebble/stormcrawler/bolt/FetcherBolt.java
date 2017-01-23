@@ -647,22 +647,16 @@ public class FetcherBolt extends StatusEmitterBolt {
 
 		String bodyString = urlString + "!@#$" + hostUrl + "####" + project_id;
 		CloseableHttpAsyncClient httpclient = HttpAsyncClients.createDefault();
-		try {
-			httpclient.start();
-			HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/" + responseCode + "");
 
-			StringEntity myEntity = new StringEntity(bodyString, ContentType.create("text/plain", "UTF-8"));
-			httppost.setEntity(myEntity);
-			httpclient.execute(httppost, null);
-
-		} finally {
-			try {
-				httpclient.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+		httpclient.start();
+		HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/" + responseCode + "");
+		// HttpPost httppost = new
+		// HttpPost("http://192.168.200.91:8000/polls/standalone/");
+		// HttpPost httppost = new
+		// HttpPost("http://localhost:3010/nutch-seeds");
+		StringEntity myEntity = new StringEntity(bodyString, ContentType.create("text/plain", "UTF-8"));
+		httppost.setEntity(myEntity);
+		httpclient.execute(httppost, null);
 
 	}
 
@@ -683,7 +677,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		// Pool = new JedisPool(new JedisPoolConfig(), "localhost");
-		//jedis = new Jedis("localhost", 6379);
+		jedis = new Jedis("localhost", 6379);
 		super.prepare(stormConf, context, collector);
 
 		Config conf = new Config();
