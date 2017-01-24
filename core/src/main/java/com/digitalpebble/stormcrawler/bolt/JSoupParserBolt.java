@@ -427,9 +427,8 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		CloseableHttpAsyncClient httpclient = HttpAsyncClients.createDefault();
 
 		httpclient.start();
-		// HttpPost httppost = new
-		// HttpPost("http://localhost:5000/polls/standalone/");
-		HttpPost httppost = new HttpPost("http://192.168.200.91:8000/polls/standalone/");
+		HttpPost httppost = new HttpPost("http://localhost:5000/polls/standalone/");
+		//HttpPost httppost = new HttpPost("http://192.168.200.91:8000/polls/standalone/");
 		// HttpPost httppost = new
 		// HttpPost("http://localhost:3010/nutch-seeds");
 		StringEntity myEntity = new StringEntity(bodyString, ContentType.create("text/plain", "UTF-8"));
