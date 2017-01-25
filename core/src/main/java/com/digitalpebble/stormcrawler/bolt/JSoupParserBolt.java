@@ -321,6 +321,9 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 						}
 					}
 					project_id = jedis.hget(main, "project_id");
+					if(project_id == null){
+						project_id = jedis.hget("www."+main, "project_id");
+					}
 
 				}
 			}
