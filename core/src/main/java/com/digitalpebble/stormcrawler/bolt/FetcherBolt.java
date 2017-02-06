@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,6 +70,10 @@ import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
 import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.async.Callback;
+import com.mashape.unirest.http.exceptions.UnirestException;
+
 import redis.clients.jedis.Jedis;
 import crawlercommons.robots.BaseRobotRules;
 import crawlercommons.domains.PaidLevelDomain;
@@ -646,17 +651,29 @@ public class FetcherBolt extends StatusEmitterBolt {
 	private void postRequestToMeteorIfError(String hostUrl, String urlString, String project_id, String responseCode) {
 
 		String bodyString = urlString + "!@#$" + hostUrl + "####" + project_id;
-		CloseableHttpAsyncClient httpclient = HttpAsyncClients.createDefault();
+		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest.post("http://localhost:3000/ErrorStatusUrls/" + responseCode + "")	
+				  .body(bodyString)
+			      .asStringAsync(new Callback<String>() {
 
-		httpclient.start();
-		HttpPost httppost = new HttpPost("http://localhost:3000/ErrorStatusUrls/" + responseCode + "");
-		// HttpPost httppost = new
-		// HttpPost("http://192.168.200.91:8000/polls/standalone/");
-		// HttpPost httppost = new
-		// HttpPost("http://localhost:3010/nutch-seeds");
-		StringEntity myEntity = new StringEntity(bodyString, ContentType.create("text/plain", "UTF-8"));
-		httppost.setEntity(myEntity);
-		httpclient.execute(httppost, null);
+					@Override
+					public void completed(com.mashape.unirest.http.HttpResponse<String> response) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void failed(UnirestException e) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void cancelled() {
+						// TODO Auto-generated method stub
+						
+					}
+				})	;
+	
 
 	}
 
