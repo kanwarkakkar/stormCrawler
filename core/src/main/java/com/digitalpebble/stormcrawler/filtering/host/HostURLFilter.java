@@ -149,7 +149,10 @@ public class HostURLFilter implements URLFilter {
 				}
 				String foundHost = "FOUND" + fromHost;
 				String coveredHostUrls = "coveredHostUrls" + fromHost;
-				jedis.sadd(foundHost, urlToFilter);
+				if (!urlToFilter.endsWith(".xml")) {
+					jedis.sadd(foundHost, urlToFilter);
+				}
+				
 				jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
 
 				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
@@ -167,11 +170,10 @@ public class HostURLFilter implements URLFilter {
 						jedis.sadd(coveredHostUrls, urlToFilter);
 						if (!urlToFilter.endsWith(".xml")) {
 
-							
 							jedis.hincrBy(fromHost, fromHost, 1);
 						}
 					}
-				}else{
+				} else {
 					return null;
 				}
 
