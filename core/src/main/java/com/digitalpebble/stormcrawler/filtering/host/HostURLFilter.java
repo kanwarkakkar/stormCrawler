@@ -149,22 +149,27 @@ public class HostURLFilter implements URLFilter {
 				}
 				String foundHost = "FOUND" + fromHost;
 				String coveredHostUrls = "coveredHostUrls" + fromHost;
-				if (!urlToFilter.endsWith(".xml")) {
+				if (!urlToFilter.endsWith(".xml")){
+					if(!urlToFilter.endsWith(".gz")){
 					jedis.sadd(foundHost, urlToFilter);
+					}
 				}
-				
+
+
 				jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
 
 				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
 				if (defaultLimitOfCrawl == null) {
-					defaultLimitOfCrawl = "100";
+					defaultLimitOfCrawl = "10000";
 				}
 
 				if (!jedis.sismember(coveredHostUrls, urlToFilter)) {
 
 					if (urlCount > Integer.parseInt(defaultLimitOfCrawl)) {
-
-						return null;
+						if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz"))
+							return urlToFilter;
+						else
+							return null;
 
 					} else {
 						jedis.sadd(coveredHostUrls, urlToFilter);
@@ -174,7 +179,10 @@ public class HostURLFilter implements URLFilter {
 						}
 					}
 				} else {
-					return null;
+					if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz"))
+						return urlToFilter;
+					else
+						return null;
 				}
 
 			}
