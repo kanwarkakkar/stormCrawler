@@ -80,12 +80,10 @@ public class HostURLFilter implements URLFilter {
 
 	@Override
 	public String filter(URL sourceUrl, Metadata sourceMetadata, String urlToFilter) {
-
-		if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
-			return urlToFilter;
+	if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
+		return urlToFilter;
 		}
-		// jedis = new Jedis("localhost",6379);
-
+		
 		URL tURL;
 		try {
 			tURL = new URL(urlToFilter);
@@ -160,7 +158,7 @@ public class HostURLFilter implements URLFilter {
 
 				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
 				if (defaultLimitOfCrawl == null) {
-					defaultLimitOfCrawl = "10000";
+					defaultLimitOfCrawl = "100";
 				}
 
 				if (!jedis.sismember(coveredHostUrls, urlToFilter)) {

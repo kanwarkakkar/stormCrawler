@@ -99,11 +99,13 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                 byte[] clue = "http://www.sitemaps.org/schemas/sitemap/0.9"
                         .getBytes();
                 byte[] beginning = content;
-                
+               
                 if (content.length > maxOffsetGuess && maxOffsetGuess > 0) {
                     beginning = Arrays.copyOfRange(content, 0, maxOffsetGuess);
                 }
                 found = Bytes.indexOf(beginning, clue);
+                if(url.endsWith(".gz"))
+                	found = 1;
                 if (found != -1) {
                     LOG.info("{} detected as sitemap based on content", url);
                 }
