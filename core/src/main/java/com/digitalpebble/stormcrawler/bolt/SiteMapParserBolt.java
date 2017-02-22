@@ -56,6 +56,9 @@ import crawlercommons.sitemaps.SiteMap;
 import crawlercommons.sitemaps.SiteMapIndex;
 import crawlercommons.sitemaps.SiteMapURL;
 import crawlercommons.sitemaps.SiteMapURL.ChangeFrequency;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import crawlercommons.sitemaps.UnknownFormatException;
 
 /**
@@ -77,7 +80,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
 
     private ParseFilter parseFilters;
     private int filterHoursSinceModified = -1;
-
+    private JedisPool pool;
     private int maxOffsetGuess = 300;
 
     @Override
@@ -182,6 +185,8 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
         crawlercommons.sitemaps.SiteMapParser parser = new crawlercommons.sitemaps.SiteMapParser(
                 strictMode);
 
+        Jedis jedis = null;
+    	jedis = pool.getResource();
         URL sURL = new URL(url);
         AbstractSiteMap siteMap;
         // let the parser guess what the mimetype is
@@ -219,7 +224,14 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                         }
                     }
                 }
-
+            	
+            	String foundHost =  parentMetadata.getValues("hostname")[0];
+            	foundHost = "sitemap" + foundHost;
+            	if (!target.endsWith(".xml")){
+					if(!target.endsWith(".gz")){
+					jedis.sadd(foundHost, target);
+					}
+				}
                 Outlink ol = filterOutlink(sURL, target, parentMetadata,
                         isSitemapKey, "true");
                 if (ol == null) {
@@ -260,7 +272,17 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                         }
                     }
                 }
-
+            	
+                String foundHost =  parentMetadata.getValues("hostname")[0];
+            	foundHost = "sitemap" + foundHost;
+            	if (!target.endsWith(".xml")){
+					if(!target.endsWith(".gz")){
+					jedis.sadd(foundHost, target);
+					}
+				}
+            	
+	
+        		
                 Outlink ol = filterOutlink(sURL, target, parentMetadata,
                         isSitemapKey, "false");
                 if (ol == null) {
@@ -270,7 +292,9 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                 LOG.debug("{} : [sitemap] {}", url, target);
             }
         }
-
+        if (jedis != null) {
+			jedis.close();
+		}
         return links;
     }
 
@@ -279,6 +303,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
         super.prepare(stormConf, context, collector);
+        pool = new JedisPool(new JedisPoolConfig(), "localhost");
         sniffWhenNoSMKey = ConfUtils.getBoolean(stormConf,
                 "sitemap.sniffContent", false);
         filterHoursSinceModified = ConfUtils.getInt(stormConf,
