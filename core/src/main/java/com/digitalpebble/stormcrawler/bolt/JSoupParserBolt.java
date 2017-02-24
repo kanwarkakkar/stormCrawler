@@ -65,6 +65,7 @@ import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.Detector;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.mime.MediaType;
+import org.bson.Document;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -105,6 +106,13 @@ import org.apache.http.nio.IOControl;
 import org.apache.http.nio.client.methods.AsyncCharConsumer;
 import org.apache.http.nio.client.methods.HttpAsyncMethods;
 import org.apache.http.protocol.HttpContext;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.MongoClient; // Importing MongoDb Client
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 
 /**
  * Parser for HTML documents only which uses ICU4J to detect the charset
@@ -178,7 +186,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		byte[] content = tuple.getBinaryByField("content");
 		String url = tuple.getStringByField("url");
 		Metadata metadata = (Metadata) tuple.getValueByField("metadata");
+		MongoClient mongoClient = new MongoClient("localhost", 3001);
 
+		DB db = mongoClient.getDB("meteor");
+		DBCollection collectionAnchorText = db.getCollection("anchorTextLinks");
+		
 		Element body;
 		String bodyString = "";
 		LOG.info("Parsing : starting {}", url);
@@ -272,8 +284,23 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 					if (!noFollow && robotsTags.isNoFollow()) {
 						noFollow = true;
 					}
-
+				
+					
 					String anchor = link.text();
+					//To Upsert a document with AnchorText and BaseURL(ParentURL)
+					
+					BasicDBObject anchorTextDocument = new BasicDBObject();					
+					anchorTextDocument.put("anchorText", anchor);
+					anchorTextDocument.put("url", targetURL);
+					anchorTextDocument.put("BaseUrl", url);
+					String linkImage ="";
+					if(anchor.length() ==0){
+						linkImage = link.html();
+						anchorTextDocument.put("anchorText", linkImage);
+					}
+				
+					collectionAnchorText.update(anchorTextDocument, anchorTextDocument,true,false);
+			
 					if (StringUtils.isNotBlank(targetURL)) {
 						// any existing anchors for the same target?
 						List<String> anchors = slinks.get(targetURL);
@@ -288,6 +315,8 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 					}
 				}
 			}
+
+			mongoClient.close();
 
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
@@ -324,99 +353,94 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 						}
 					}
 					project_id = jedis.hget(main, "project_id");
-					if(project_id == null){
-						project_id = jedis.hget("www."+main, "project_id");
+					if (project_id == null) {
+						project_id = jedis.hget("www." + main, "project_id");
 					}
 
 				}
 			}
 
-		jedis.close();
-		bodyString = "<document_Headers>" + headersString + "</document_Headers>\n";
-		bodyString = bodyString + "<document_URL>" + project_id + "$$$$" + url + "</document_URL>\n";
-		bodyString = bodyString + jsoupDoc.html().toString();
+			jedis.close();
+			bodyString = "<document_Headers>" + headersString + "</document_Headers>\n";
+			bodyString = bodyString + "<document_URL>" + project_id + "$$$$" + url + "</document_URL>\n";
+			bodyString = bodyString + jsoupDoc.html().toString();
 
-		if (body != null) {
-			text = body.text();
+			if (body != null) {
+				text = body.text();
 
-		}
-
-	}catch(
-
-	Throwable e)
-	{
-		String errorMessage = "Exception while parsing " + url + ": " + e;
-		handleException(url, e, metadata, tuple, "content parsing", errorMessage);
-		return;
-	}
-
-	// store identified charset in md
-	metadata.setValue("parse.Content-Encoding",charset);
-
-	long duration = System.currentTimeMillis() - start;
-
-	LOG.info("Parsed {} in {} msec",url,duration);
-
-	// redirection?
-	try
-	{
-		String redirection = RefreshTag.extractRefreshURL(fragment);
-
-		if (StringUtils.isNotBlank(redirection)) {
-			// stores the URL it redirects to
-			// used for debugging mainly - do not resolve the target
-			// URL
-			LOG.info("Found redir in {} to {}", url, redirection);
-			metadata.setValue("_redirTo", redirection);
-
-			if (allowRedirs() && StringUtils.isNotBlank(redirection)) {
-				emitOutlink(tuple, new URL(url), redirection, metadata);
 			}
 
-			// Mark URL as redirected
-			collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, tuple,
-					new Values(url, metadata, Status.REDIRECTION));
-			collector.ack(tuple);
-			eventCounter.scope("tuple_success").incr();
+		} catch (
+
+		Throwable e) {
+			String errorMessage = "Exception while parsing " + url + ": " + e;
+			handleException(url, e, metadata, tuple, "content parsing", errorMessage);
 			return;
 		}
-	}catch(
-	MalformedURLException e)
-	{
-		LOG.error("MalformedURLException on {}", url);
-	}
 
-	List<Outlink> outlinks = toOutlinks(url, metadata, slinks);
+		// store identified charset in md
+		metadata.setValue("parse.Content-Encoding", charset);
 
-	ParseResult parse = new ParseResult();parse.setOutlinks(outlinks);
+		long duration = System.currentTimeMillis() - start;
 
-	// parse data of the parent URL
-	ParseData parseData = parse
-			.get(url);parseData.setMetadata(metadata);parseData.setText(text);parseData.setContent(content);
+		LOG.info("Parsed {} in {} msec", url, duration);
 
-	// apply the parse filters if any
-	try
-	{
-		parseFilters.filter(url, content, fragment, parse);
-	}catch(
-	RuntimeException e)
-	{
-		String errorMessage = "Exception while running parse filters on " + url + ": " + e;
-		handleException(url, e, metadata, tuple, "content filtering", errorMessage);
-		return;
-	}
+		// redirection?
+		try {
+			String redirection = RefreshTag.extractRefreshURL(fragment);
 
-	if(emitOutlinks)
-	{
-		for (Outlink outlink : parse.getOutlinks()) {
-			collector.emit(StatusStreamName, tuple,
-					new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+			if (StringUtils.isNotBlank(redirection)) {
+				// stores the URL it redirects to
+				// used for debugging mainly - do not resolve the target
+				// URL
+				LOG.info("Found redir in {} to {}", url, redirection);
+				metadata.setValue("_redirTo", redirection);
+
+				if (allowRedirs() && StringUtils.isNotBlank(redirection)) {
+					emitOutlink(tuple, new URL(url), redirection, metadata);
+				}
+
+				// Mark URL as redirected
+				collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, tuple,
+						new Values(url, metadata, Status.REDIRECTION));
+				collector.ack(tuple);
+				eventCounter.scope("tuple_success").incr();
+				return;
+			}
+		} catch (MalformedURLException e) {
+			LOG.error("MalformedURLException on {}", url);
 		}
-	}
 
-	// emit each document/subdocument in the ParseResult object
-	// there should be at least one ParseData item for the "parent" URL
-	postData(bodyString);
+		List<Outlink> outlinks = toOutlinks(url, metadata, slinks);
+
+		ParseResult parse = new ParseResult();
+		parse.setOutlinks(outlinks);
+
+		// parse data of the parent URL
+		ParseData parseData = parse.get(url);
+		parseData.setMetadata(metadata);
+		parseData.setText(text);
+		parseData.setContent(content);
+
+		// apply the parse filters if any
+		try {
+			parseFilters.filter(url, content, fragment, parse);
+		} catch (RuntimeException e) {
+			String errorMessage = "Exception while running parse filters on " + url + ": " + e;
+			handleException(url, e, metadata, tuple, "content filtering", errorMessage);
+			return;
+		}
+
+		if (emitOutlinks) {
+			for (Outlink outlink : parse.getOutlinks()) {
+				collector.emit(StatusStreamName, tuple,
+						new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+			}
+		}
+
+		// emit each document/subdocument in the ParseResult object
+		// there should be at least one ParseData item for the "parent" URL
+		postData(bodyString);
 		for (Map.Entry<String, ParseData> doc : parse) {
 			ParseData parseDoc = doc.getValue();
 
@@ -430,29 +454,28 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 	private void postData(String bodyString) {
 
-		//http://192.168.200.91:8000/polls/standalone/
-		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest.post("http://localhost:5000/polls/standalone/")	
-				  .body(bodyString)
-			      .asStringAsync(new Callback<String>() {
+		// http://192.168.200.91:8000/polls/standalone/
+		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
+				.post("http://localhost:5000/polls/standalone/").body(bodyString).asStringAsync(new Callback<String>() {
 
 					@Override
 					public void completed(com.mashape.unirest.http.HttpResponse<String> response) {
 						// TODO Auto-generated method stub
-						
+
 					}
 
 					@Override
 					public void failed(UnirestException e) {
 						// TODO Auto-generated method stub
-						
+
 					}
 
 					@Override
 					public void cancelled() {
 						// TODO Auto-generated method stub
-						
+
 					}
-				})	;
+				});
 
 	}
 
