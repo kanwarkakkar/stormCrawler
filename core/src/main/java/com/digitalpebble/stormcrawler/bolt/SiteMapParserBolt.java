@@ -225,12 +225,16 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                     }
                 }
             	
-            	String foundHost =  parentMetadata.getValues("hostname")[0];
-            	foundHost = "sitemap" + foundHost;
-            	if (!target.endsWith(".xml")){
-					if(!target.endsWith(".gz")){
-					jedis.sadd(foundHost, target);
+            	try {
+					String foundHost = parentMetadata.getValues("hostname")[0];
+					foundHost = "sitemap" + foundHost;
+					if (!target.endsWith(".xml")) {
+						if (!target.endsWith(".gz")) {
+							jedis.sadd(foundHost, target);
+						}
 					}
+				} catch (Exception e) {
+
 				}
                 Outlink ol = filterOutlink(sURL, target, parentMetadata,
                         isSitemapKey, "true");
@@ -272,15 +276,19 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                         }
                     }
                 }
-            	
-                String foundHost =  parentMetadata.getValues("hostname")[0];
-            	foundHost = "sitemap" + foundHost;
-            	if (!target.endsWith(".xml")){
-					if(!target.endsWith(".gz")){
-					jedis.sadd(foundHost, target);
+            	try {
+					String foundHost = parentMetadata.getValues("hostname")[0];
+					foundHost = "sitemap" + foundHost;
+					if (!target.endsWith(".xml")) {
+						if (!target.endsWith(".gz")) {
+							jedis.sadd(foundHost, target);
+						}
 					}
+				} catch (Exception e) {
+
 				}
-            	
+
+
 	
         		
                 Outlink ol = filterOutlink(sURL, target, parentMetadata,
