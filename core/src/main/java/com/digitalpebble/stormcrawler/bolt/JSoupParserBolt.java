@@ -185,7 +185,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		byte[] content = tuple.getBinaryByField("content");
 		String url = tuple.getStringByField("url");
-		Metadata metadata = (Metadata) tuple.getValueByField("metadata");
+    	Metadata metadata = (Metadata) tuple.getValueByField("metadata");
 		MongoClient mongoClient = new MongoClient("localhost", 3001);
 
 		DB db = mongoClient.getDB("meteor");
@@ -316,7 +316,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				}
 			}
 
-			mongoClient.close();
+			//mongoClient.close();
 
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
@@ -326,43 +326,27 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				hostname = metadata.getValues("hostname")[0];
 			}
 
+			
+			
+			
 			if (hostname != null) {
 
 				project_id = jedis.hget(hostname, "project_id");
-
-				if (project_id == null) {
-
-					String hostNameSplitted[] = hostname.split("\\.");
-					String nsp[] = new String[hostNameSplitted.length];
-
-					for (int x = 0; x < hostNameSplitted.length; x++)
-						nsp[hostNameSplitted.length - 1 - x] = hostNameSplitted[x];
-
-					String main = "";
-
-					for (int x = 0; x < hostNameSplitted.length; x++) {
-						main = nsp[x] + "." + main;
-						String temp = main.substring(0, main.length() - 1);
-
-						try {
-							String ip = InetAddress.getByName(new URL("http://" + temp + "/").getHost())
-									.getHostAddress();
-							main = temp;
-							break;
-						} catch (Exception e) {
-						}
+				if(project_id == null){
+					try {
+						URL tURL = new URL(metadata.getValues("url.path")[0]);
+						String hostNameInternal = tURL.getHost();
+						hostname = hostNameInternal;
+						project_id = jedis.hget(hostNameInternal, "project_id");
+					} catch (Exception e) {	
 					}
-					project_id = jedis.hget(main, "project_id");
-					if (project_id == null) {
-						project_id = jedis.hget("www." + main, "project_id");
-					}
-
 				}
 			}
 
 			jedis.close();
 			bodyString = "<document_Headers>" + headersString + "</document_Headers>\n";
 			bodyString = bodyString + "<document_URL>" + project_id + "$$$$" + url + "</document_URL>\n";
+			bodyString = bodyString + "<document_domain>" + hostname + "</document_domain>\n";
 			bodyString = bodyString + jsoupDoc.html().toString();
 
 			if (body != null) {

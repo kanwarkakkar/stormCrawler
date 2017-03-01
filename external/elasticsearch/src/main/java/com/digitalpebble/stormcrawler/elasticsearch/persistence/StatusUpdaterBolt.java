@@ -51,7 +51,7 @@ import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.URLPartitioner;
-import redis.clients.jedis.Jedis;
+
 
 /**
  * Simple bolt which stores the status of URLs into ElasticSearch. Takes the
@@ -70,7 +70,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private static final String ESStatusDocTypeParamName = "es.status.doc.type";
     private static final String ESStatusRoutingParamName = "es.status.routing";
     private static final String ESStatusRoutingFieldParamName = "es.status.routing.fieldname";
-    private Jedis jedis ;
+  
     private boolean routingFieldNameInMetadata = false;
 
     private String indexName;
@@ -79,7 +79,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private URLPartitioner partitioner;
 
     /**
-     * whether to apply the same partitioning logic used for politeness for
+     * whether to apply the same partitioning logic used for politenhostnaess for
      * routing, e.g byHost
      **/
     private boolean doRouting;
@@ -96,7 +96,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
-    	  jedis = new Jedis("localhost",6379);
+    
         super.prepare(stormConf, context, collector);
       
         indexName = ConfUtils.getString(stormConf,

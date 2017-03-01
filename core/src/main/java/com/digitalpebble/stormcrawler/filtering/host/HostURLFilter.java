@@ -80,10 +80,10 @@ public class HostURLFilter implements URLFilter {
 
 	@Override
 	public String filter(URL sourceUrl, Metadata sourceMetadata, String urlToFilter) {
-	if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
-		return urlToFilter;
+		if (sourceUrl == null || (!ignoreOutsideHost && !ignoreOutsideDomain)) {
+			return urlToFilter;
 		}
-		
+
 		URL tURL;
 		try {
 			tURL = new URL(urlToFilter);
@@ -134,6 +134,14 @@ public class HostURLFilter implements URLFilter {
 		try {
 			jedis = pool.getResource();
 			if (fromHost != null) {
+
+				try {
+					URL baseUrl = new URL(sourceMetadata.getValues("url.path")[0]);
+					String hostNameInternal = baseUrl.getHost();
+					fromHost = hostNameInternal;
+				} catch (Exception e) {
+				}
+
 				String urlCountStr = jedis.hget(fromHost, fromHost);
 				if (urlCountStr == null) {
 					jedis.hset(fromHost, fromHost, "1");
@@ -147,12 +155,11 @@ public class HostURLFilter implements URLFilter {
 				}
 				String foundHost = "FOUND" + fromHost;
 				String coveredHostUrls = "coveredHostUrls" + fromHost;
-				if (!urlToFilter.endsWith(".xml")){
-					if(!urlToFilter.endsWith(".gz")){
-					jedis.sadd(foundHost, urlToFilter);
+				if (!urlToFilter.endsWith(".xml")) {
+					if (!urlToFilter.endsWith(".gz")) {
+						jedis.sadd(foundHost, urlToFilter);
 					}
 				}
-
 
 				jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
 
@@ -164,7 +171,7 @@ public class HostURLFilter implements URLFilter {
 				if (!jedis.sismember(coveredHostUrls, urlToFilter)) {
 
 					if (urlCount > Integer.parseInt(defaultLimitOfCrawl)) {
-						if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz"))
+						if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz") || urlToFilter.contains(".bms"))
 							return urlToFilter;
 						else
 							return null;
@@ -177,7 +184,7 @@ public class HostURLFilter implements URLFilter {
 						}
 					}
 				} else {
-					if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz"))
+					if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz") || urlToFilter.contains(".bms"))
 						return urlToFilter;
 					else
 						return null;
