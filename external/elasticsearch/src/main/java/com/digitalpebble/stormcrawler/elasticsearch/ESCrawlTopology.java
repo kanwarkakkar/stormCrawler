@@ -68,10 +68,10 @@ public class ESCrawlTopology extends ConfigurableTopology {
         builder.setBolt("fetch", new FetcherBolt(), numWorkers).fieldsGrouping(
                 "partitioner", new Fields("key"));
 
-        builder.setBolt("sitemap", new SiteMapParserBolt(), numWorkers)
+        builder.setBolt("sitemap", new SiteMapParserBolt(), 3)
                 .localOrShuffleGrouping("fetch");
 
-        builder.setBolt("parse", new JSoupParserBolt(), 4)
+        builder.setBolt("parse", new JSoupParserBolt(), 10)
                 .localOrShuffleGrouping("sitemap");
 
         builder.setBolt("indexer", new IndexerBolt(), numWorkers)

@@ -57,6 +57,8 @@ import com.google.common.cache.CacheBuilder;
 
 import crawlercommons.robots.BaseRobotRules;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import crawlercommons.domains.PaidLevelDomain;
 
 

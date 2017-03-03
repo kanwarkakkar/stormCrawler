@@ -74,6 +74,8 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.async.Callback;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Jedis;
 import crawlercommons.robots.BaseRobotRules;
 import crawlercommons.domains.PaidLevelDomain;
@@ -112,7 +114,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 	private int taskID = -1;
 
 	boolean sitemapsAutoDiscovery = false;
-	private Jedis jedis;
+	//private Jedis jedis;
+	private JedisPool pool;
 	private MultiReducedMetric perSecMetrics;
 	// private JedisPool Pool;
 
@@ -522,21 +525,35 @@ public class FetcherBolt extends StatusEmitterBolt {
 
 						}
 
-						String project_id = jedis.hget(hostUrl, "project_id");
-						postRequestToMeteorIfError(hostUrl, fit.url, project_id,
-								Integer.toString(response.getStatusCode())); // Kanwar:
-																				// Rest
-																				// Request
-																				// to
-																				// Meteor
-																				// Side
-																				// When
-																				// there
-																				// is
-																				// error
-																				// in
-																				// Status
-																				// Code
+						Jedis jedis = null;
+		try {
+			jedis = pool.getResource();
+String project_id = jedis.hget(hostUrl, "project_id");
+                                                postRequestToMeteorIfError(hostUrl, fit.url, project_id,
+                                                                Integer.toString(response.getStatusCode())); // Kanwar:
+                                                                                                                                                               	// Rest
+                                                                                                                                                               	// Request
+                                                                                                                                                               	// to
+                                                                                                                                                                // Meteor
+                                                                                                                                                                // Side
+		                                                                                                                                                                // When
+                                                                                                                                                                // there
+                                                                                                                                                                // is
+                                                                                                                                                                // error
+                                                                                                                                                                // in
+                                                                                                                                                                // Status
+                                                                                                                                                                // Code
+
+		if (jedis != null) {
+				jedis.close();
+			}
+		}catch(Exception e){
+
+if (jedis != null) {
+				jedis.close();
+			}
+		}
+
 					}
 
 					response.getMetadata().setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
@@ -694,7 +711,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		// Pool = new JedisPool(new JedisPoolConfig(), "localhost");
-		jedis = new Jedis("localhost", 6379);
+		pool = new JedisPool(new JedisPoolConfig(), "localhost");
+		//jedis = new Jedis("localhost", 6379);
 		super.prepare(stormConf, context, collector);
 
 		Config conf = new Config();

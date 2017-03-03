@@ -98,6 +98,9 @@ import redis.clients.jedis.Jedis;
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.util.concurrent.Future;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
 
 import org.apache.http.HttpResponse;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
@@ -133,7 +136,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	private Detector detector = TikaConfig.getDefaultConfig().getDetector();
 
 	private boolean detectMimeType = true;
-
+        private JedisPool pool;
 	private boolean trackAnchors = true;
 
 	private boolean emitOutlinks = true;
@@ -158,7 +161,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-		jedis = new Jedis("localhost", 6379);
+                pool = new JedisPool(new JedisPoolConfig(), "localhost");
 		super.prepare(conf, context, collector);
 
 		eventCounter = context.registerMetric(this.getClass().getSimpleName(), new MultiCountMetric(), 10);
@@ -185,11 +188,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		byte[] content = tuple.getBinaryByField("content");
 		String url = tuple.getStringByField("url");
-    	Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-		MongoClient mongoClient = new MongoClient("localhost", 3001);
+          	Metadata metadata = (Metadata) tuple.getValueByField("metadata");
+		//MongoClient mongoClient = new MongoClient("localhost", 3001);
 
-		DB db = mongoClient.getDB("meteor");
-		DBCollection collectionAnchorText = db.getCollection("anchorTextLinks");
+		//DB db = mongoClient.getDB("meteor");
+		//DBCollection collectionAnchorText = db.getCollection("anchorTextLinks");
 		
 		Element body;
 		String bodyString = "";
@@ -290,7 +293,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 					//To Upsert a document with AnchorText and BaseURL(ParentURL)
 					
 					BasicDBObject anchorTextDocument = new BasicDBObject();					
-					anchorTextDocument.put("anchorText", anchor);
+				        anchorTextDocument.put("anchorText", anchor);
 					anchorTextDocument.put("url", targetURL);
 					anchorTextDocument.put("BaseUrl", url);
 					String linkImage ="";
@@ -299,7 +302,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 						anchorTextDocument.put("anchorText", linkImage);
 					}
 				
-					collectionAnchorText.update(anchorTextDocument, anchorTextDocument,true,false);
+					//collectionAnchorText.update(anchorTextDocument, anchorTextDocument,true,false);
 			
 					if (StringUtils.isNotBlank(targetURL)) {
 						// any existing anchors for the same target?
@@ -327,8 +330,9 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 			}
 
 			
+			Jedis jedis = null;
 			
-			
+			jedis = pool.getResource();
 			if (hostname != null) {
 
 				project_id = jedis.hget(hostname, "project_id");
@@ -343,7 +347,9 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				}
 			}
 
-			jedis.close();
+			if (jedis != null) {
+				jedis.close();
+			}
 			bodyString = "<document_Headers>" + headersString + "</document_Headers>\n";
 			bodyString = bodyString + "<document_URL>" + project_id + "$$$$" + url + "</document_URL>\n";
 			bodyString = bodyString + "<document_domain>" + hostname + "</document_domain>\n";
@@ -357,6 +363,10 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		} catch (
 
 		Throwable e) {
+
+			if (jedis != null) {
+				jedis.close();
+			}
 			String errorMessage = "Exception while parsing " + url + ": " + e;
 			handleException(url, e, metadata, tuple, "content parsing", errorMessage);
 			return;
@@ -440,7 +450,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		// http://192.168.200.91:8000/polls/standalone/
 		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
-				.post("http://localhost:5000/polls/standalone/").body(bodyString).asStringAsync(new Callback<String>() {
+			.post("http://localhost:5000/polls/standalone/").body(bodyString).asStringAsync(new Callback<String>() {
 
 					@Override
 					public void completed(com.mashape.unirest.http.HttpResponse<String> response) {
@@ -451,12 +461,15 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 					@Override
 					public void failed(UnirestException e) {
 						// TODO Auto-generated method stub
+						LOG.info("FailedFailed",e);
 
 					}
 
 					@Override
 					public void cancelled() {
 						// TODO Auto-generated method stub
+
+  						LOG.info("CancledCancledCanldedCAnclled");
 
 					}
 				});
