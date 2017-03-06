@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
@@ -54,6 +55,10 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -65,7 +70,6 @@ import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.Detector;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.mime.MediaType;
-import org.bson.Document;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -101,21 +105,7 @@ import java.util.concurrent.Future;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-
-import org.apache.http.HttpResponse;
-import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.http.nio.IOControl;
-import org.apache.http.nio.client.methods.AsyncCharConsumer;
-import org.apache.http.nio.client.methods.HttpAsyncMethods;
-import org.apache.http.protocol.HttpContext;
-
-import com.mongodb.BasicDBObject;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.MongoClient; // Importing MongoDb Client
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import kafka.*;
 
 /**
  * Parser for HTML documents only which uses ICU4J to detect the charset
@@ -136,7 +126,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	private Detector detector = TikaConfig.getDefaultConfig().getDetector();
 
 	private boolean detectMimeType = true;
-        private JedisPool pool;
+	private JedisPool pool;
 	private boolean trackAnchors = true;
 
 	private boolean emitOutlinks = true;
@@ -161,7 +151,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-                pool = new JedisPool(new JedisPoolConfig(), "localhost");
+		pool = new JedisPool(new JedisPoolConfig(), "localhost");
 		super.prepare(conf, context, collector);
 
 		eventCounter = context.registerMetric(this.getClass().getSimpleName(), new MultiCountMetric(), 10);
@@ -188,12 +178,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		byte[] content = tuple.getBinaryByField("content");
 		String url = tuple.getStringByField("url");
-          	Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-		//MongoClient mongoClient = new MongoClient("localhost", 3001);
-
-		//DB db = mongoClient.getDB("meteor");
-		//DBCollection collectionAnchorText = db.getCollection("anchorTextLinks");
-		
+		Metadata metadata = (Metadata) tuple.getValueByField("metadata");
 		Element body;
 		String bodyString = "";
 		LOG.info("Parsing : starting {}", url);
@@ -287,23 +272,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 					if (!noFollow && robotsTags.isNoFollow()) {
 						noFollow = true;
 					}
-				
-					
+
 					String anchor = link.text();
-					//To Upsert a document with AnchorText and BaseURL(ParentURL)
-					
-					BasicDBObject anchorTextDocument = new BasicDBObject();					
-				        anchorTextDocument.put("anchorText", anchor);
-					anchorTextDocument.put("url", targetURL);
-					anchorTextDocument.put("BaseUrl", url);
-					String linkImage ="";
-					if(anchor.length() ==0){
-						linkImage = link.html();
-						anchorTextDocument.put("anchorText", linkImage);
-					}
-				
-					//collectionAnchorText.update(anchorTextDocument, anchorTextDocument,true,false);
-			
+					// To Upsert a document with AnchorText and
+					// BaseURL(ParentURL)
+
 					if (StringUtils.isNotBlank(targetURL)) {
 						// any existing anchors for the same target?
 						List<String> anchors = slinks.get(targetURL);
@@ -319,7 +292,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				}
 			}
 
-			//mongoClient.close();
+			// mongoClient.close();
 
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
@@ -329,20 +302,19 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				hostname = metadata.getValues("hostname")[0];
 			}
 
-			
 			Jedis jedis = null;
-			
+
 			jedis = pool.getResource();
 			if (hostname != null) {
 
 				project_id = jedis.hget(hostname, "project_id");
-				if(project_id == null){
+				if (project_id == null) {
 					try {
 						URL tURL = new URL(metadata.getValues("url.path")[0]);
 						String hostNameInternal = tURL.getHost();
 						hostname = hostNameInternal;
 						project_id = jedis.hget(hostNameInternal, "project_id");
-					} catch (Exception e) {	
+					} catch (Exception e) {
 					}
 				}
 			}
@@ -448,31 +420,18 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 	private void postData(String bodyString) {
 
-		// http://192.168.200.91:8000/polls/standalone/
-		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
-			.post("http://localhost:5000/polls/standalone/").body(bodyString).asStringAsync(new Callback<String>() {
+		Properties configProperties = new Properties();
+		configProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		configProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringSerializer");
+		configProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringSerializer");
+		configProperties.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+		configProperties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
 
-					@Override
-					public void completed(com.mashape.unirest.http.HttpResponse<String> response) {
-						// TODO Auto-generated method stub
-
-					}
-
-					@Override
-					public void failed(UnirestException e) {
-						// TODO Auto-generated method stub
-						LOG.info("FailedFailed",e);
-
-					}
-
-					@Override
-					public void cancelled() {
-						// TODO Auto-generated method stub
-
-  						LOG.info("CancledCancledCanldedCAnclled");
-
-					}
-				});
+		Producer producer = new KafkaProducer<String, String>(configProperties);
+		ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python", bodyString);
+		producer.send(rec);
 
 	}
 
