@@ -181,6 +181,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		Metadata metadata = (Metadata) tuple.getValueByField("metadata");
 		Element body;
 		String bodyString = "";
+		String project_id = null;
 		LOG.info("Parsing : starting {}", url);
 
 		// check that its content type is HTML
@@ -296,7 +297,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
-			String project_id = null;
+			
 			String hostname = null;
 			if (metadata.getValues("hostname") != null) {
 				hostname = metadata.getValues("hostname")[0];
@@ -406,7 +407,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		// emit each document/subdocument in the ParseResult object
 		// there should be at least one ParseData item for the "parent" URL
-		postData(bodyString);
+		postData( project_id, bodyString);
 		for (Map.Entry<String, ParseData> doc : parse) {
 			ParseData parseDoc = doc.getValue();
 
@@ -418,7 +419,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		eventCounter.scope("tuple_success").incr();
 	}
 
-	private void postData(String bodyString) {
+	private void postData(String hostname,String bodyString) {
 
 		Properties configProperties = new Properties();
 		configProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -429,9 +430,46 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		configProperties.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
 		configProperties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
 
-		Producer producer = new KafkaProducer<String, String>(configProperties);
-		ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python", bodyString);
-		producer.send(rec);
+		Producer<String, String> producer ;
+		String foundHost = "FOUND" + "www.alibaba.com";
+		Jedis jedis = null;
+
+		jedis = pool.getResource();
+		Long countFound = jedis.scard(foundHost);
+		if(countFound <= 500){
+			producer = new KafkaProducer<String, String>(configProperties);
+			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_pythonlessthan500", bodyString);
+			producer.send(rec);
+			producer.close();
+			
+		}
+		
+		if(countFound > 500 && countFound <=2500 ){
+			producer = new KafkaProducer<String, String>(configProperties);
+			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python500to2500", bodyString);
+			producer.send(rec);
+			producer.close();
+		}
+		
+		if(countFound > 2500 && countFound <=10000 ){
+			producer = new KafkaProducer<String, String>(configProperties);
+			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python2500to10000", bodyString);
+			producer.send(rec);
+			producer.close();
+		}
+		
+
+		if(countFound > 10000){
+			producer = new KafkaProducer<String, String>(configProperties);
+			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python10000Above", bodyString);
+			producer.send(rec);
+			producer.close();
+		}
+		
+		if (jedis != null) {
+			jedis.close();
+		}
+		
 
 	}
 
