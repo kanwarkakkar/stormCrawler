@@ -431,7 +431,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		configProperties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
 
 		Producer<String, String> producer ;
-		String foundHost = "FOUND" + "www.alibaba.com";
+		String foundHost = "FOUND" + hostname;
 		Jedis jedis = null;
 
 		jedis = pool.getResource();
