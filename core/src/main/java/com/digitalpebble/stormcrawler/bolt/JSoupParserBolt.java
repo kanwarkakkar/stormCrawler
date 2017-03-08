@@ -182,6 +182,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		Element body;
 		String bodyString = "";
 		String project_id = null;
+		String hostname = null;
 		LOG.info("Parsing : starting {}", url);
 
 		// check that its content type is HTML
@@ -298,7 +299,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
 			
-			String hostname = null;
+			
 			if (metadata.getValues("hostname") != null) {
 				hostname = metadata.getValues("hostname")[0];
 			}
@@ -407,7 +408,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		// emit each document/subdocument in the ParseResult object
 		// there should be at least one ParseData item for the "parent" URL
-		postData( project_id, bodyString);
+		postData( hostname, bodyString);
 		for (Map.Entry<String, ParseData> doc : parse) {
 			ParseData parseDoc = doc.getValue();
 
