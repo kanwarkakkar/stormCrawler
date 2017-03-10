@@ -12,7 +12,7 @@ config:
   fetcher.server.delay: 0.5
   fetcher.threads.number: 500
   redirections.allowed : true
-  worker.heap.memory.mb: 8192
+  worker.heap.memory.mb: 4096
   # mandatory when using Flux
   topology.kryo.register:
     - com.digitalpebble.stormcrawler.Metadata

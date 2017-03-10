@@ -162,6 +162,9 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
                 pool = new JedisPool(new JedisPoolConfig(), "localhost");
+	Unirest.setConcurrency(500, 200);
+ Unirest.setTimeouts(120000, 120000);
+
 		super.prepare(conf, context, collector);
 
 		eventCounter = context.registerMetric(this.getClass().getSimpleName(), new MultiCountMetric(), 10);
@@ -449,7 +452,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	private void postData(String bodyString) {
 
 		// http://192.168.200.91:8000/polls/standalone/
-		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
+                 Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
 			.post("http://localhost:5000/polls/standalone/").body(bodyString).asStringAsync(new Callback<String>() {
 
 					@Override
