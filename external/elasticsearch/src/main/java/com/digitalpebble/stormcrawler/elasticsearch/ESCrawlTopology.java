@@ -58,6 +58,7 @@ public class ESCrawlTopology extends ConfigurableTopology {
         // set to the real number of shards ONLY if es.status.routing is set to
         // true in the configuration
         int numShards = 10;
+        
 
         builder.setSpout("spout", new AggregationSpout(), numShards);
 

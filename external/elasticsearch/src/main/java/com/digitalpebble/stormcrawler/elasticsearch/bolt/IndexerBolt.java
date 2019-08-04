@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.elasticsearch.ElasticSearchConnection;
+import com.digitalpebble.stormcrawler.elasticsearch.RabbitMQConnection;
 import com.digitalpebble.stormcrawler.indexing.AbstractIndexerBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -66,6 +67,8 @@ public class IndexerBolt extends AbstractIndexerBolt {
     private MultiCountMetric eventCounter;
 
     private ElasticSearchConnection connection;
+    
+    private RabbitMQConnection connectionRMQ;
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
@@ -86,6 +89,13 @@ public class IndexerBolt extends AbstractIndexerBolt {
                     .getConnection(conf, ESBoltType);
         } catch (Exception e1) {
             LOG.error("Can't connect to ElasticSearch", e1);
+            throw new RuntimeException(e1);
+        }
+        try {
+        	connectionRMQ = RabbitMQConnection
+                    .getChannel();
+        } catch (Exception e1) {
+            LOG.error("Can't connect to RabbitMQ", e1);
             throw new RuntimeException(e1);
         }
 
@@ -123,6 +133,8 @@ public class IndexerBolt extends AbstractIndexerBolt {
         }
 
         try {
+        	String message = "Hello World!";
+        	connectionRMQ.getClient().basicPublish("", "kk", null, text.getBytes());
             XContentBuilder builder = jsonBuilder().startObject();
 
             // display text of the document?

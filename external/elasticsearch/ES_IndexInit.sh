@@ -8,7 +8,7 @@ echo "Deleted status index"
 
 echo "Creating status index with mapping"
 
-curl -s -XPOST localhost:9200/status -d '
+curl -s -XPOST localhost:9200/status -H 'Content-Type: application/json'  -d '
 {
 	"settings": {
 		"index": {
