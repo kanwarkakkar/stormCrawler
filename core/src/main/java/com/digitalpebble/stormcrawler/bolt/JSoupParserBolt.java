@@ -151,7 +151,6 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-		pool = new JedisPool(new JedisPoolConfig(), "localhost");
 		super.prepare(conf, context, collector);
 
 		eventCounter = context.registerMetric(this.getClass().getSimpleName(), new MultiCountMetric(), 10);
@@ -175,7 +174,6 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 	@Override
 	public void execute(Tuple tuple) {
-
 		byte[] content = tuple.getBinaryByField("content");
 		String url = tuple.getStringByField("url");
 		Metadata metadata = (Metadata) tuple.getValueByField("metadata");
@@ -183,6 +181,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		String bodyString = "";
 		String project_id = null;
 		String hostname = null;
+		String[] projectIdArr = metadata.getValues("projectId");
+        String projectId= "dummy";
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        } 
 		LOG.info("Parsing : starting {}", url);
 
 		// check that its content type is HTML
@@ -294,53 +297,22 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				}
 			}
 
-			// mongoClient.close();
-
 			String headersString = metadata.toString();
 			body = jsoupDoc.body();
 			
-			
-			if (metadata.getValues("hostname") != null) {
-				hostname = metadata.getValues("hostname")[0];
-			}
-
-			Jedis jedis = null;
-
-			jedis = pool.getResource();
-			if (hostname != null) {
-
-				project_id = jedis.hget(hostname, "project_id");
-				if (project_id == null) {
-					try {
-						URL tURL = new URL(metadata.getValues("url.path")[0]);
-						String hostNameInternal = tURL.getHost();
-						hostname = hostNameInternal;
-						project_id = jedis.hget(hostNameInternal, "project_id");
-					} catch (Exception e) {
-					}
-				}
-			}
-
-			if (jedis != null) {
-				jedis.close();
-			}
 			bodyString = "<document_Headers>" + headersString + "</document_Headers>\n";
-			bodyString = bodyString + "<document_URL>" + project_id + "$$$$" + url + "</document_URL>\n";
-			bodyString = bodyString + "<document_domain>" + hostname + "</document_domain>\n";
 			bodyString = bodyString + jsoupDoc.html().toString();
 
 			if (body != null) {
 				text = body.text();
 
 			}
+			//text = bodyString;
 
 		} catch (
 
 		Throwable e) {
 
-			if (jedis != null) {
-				jedis.close();
-			}
 			String errorMessage = "Exception while parsing " + url + ": " + e;
 			handleException(url, e, metadata, tuple, "content parsing", errorMessage);
 			return;
@@ -350,8 +322,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		metadata.setValue("parse.Content-Encoding", charset);
 
 		long duration = System.currentTimeMillis() - start;
-
-		LOG.info("Parsed {} in {} msec", url, duration);
+		LOG.info("Parsed {} in msec", metadata);
 
 		// redirection?
 		try {
@@ -389,6 +360,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		parseData.setMetadata(metadata);
 		parseData.setText(text);
 		parseData.setContent(content);
+//		parseData.setRawText(bodyString);
 
 		// apply the parse filters if any
 		try {
@@ -401,8 +373,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		if (emitOutlinks) {
 			for (Outlink outlink : parse.getOutlinks()) {
+				Metadata metadataNew = (Metadata) outlink.getMetadata();
+				metadataNew.setValue("projectId", projectId);
+				// LOG.info("ack {} in OutlinkOutlinkOutlinkOutlinkOutlink ack", metadataNew);
 				collector.emit(StatusStreamName, tuple,
-						new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+						new Values(outlink.getTargetURL(), metadataNew, Status.DISCOVERED));
 			}
 		}
 
@@ -411,68 +386,68 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		//postData( hostname, bodyString);
 		for (Map.Entry<String, ParseData> doc : parse) {
 			ParseData parseDoc = doc.getValue();
-
+			LOG.info("ack {} in ParseDataParseDataParseData ack", parseDoc.getMetadata());
 			collector.emit(tuple,
 					new Values(doc.getKey(), parseDoc.getContent(), parseDoc.getMetadata(), parseDoc.getText()));
 		}
-
+	
 		collector.ack(tuple);
 		eventCounter.scope("tuple_success").incr();
 	}
 
-	private void postData(String hostname,String bodyString) {
-
-		Properties configProperties = new Properties();
-		configProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		configProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringSerializer");
-		configProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringSerializer");
-		configProperties.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
-		configProperties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-
-		Producer<String, String> producer ;
-		String foundHost = "FOUND" + hostname;
-		Jedis jedis = null;
-
-		jedis = pool.getResource();
-		Long countFound = jedis.scard(foundHost);
-		if(countFound <= 500){
-			producer = new KafkaProducer<String, String>(configProperties);
-			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_pythonlessthan500", bodyString);
-			producer.send(rec);
-			producer.close();
-			
-		}
-		
-		if(countFound > 500 && countFound <=2500 ){
-			producer = new KafkaProducer<String, String>(configProperties);
-			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python500to2500", bodyString);
-			producer.send(rec);
-			producer.close();
-		}
-		
-		if(countFound > 2500 && countFound <=10000 ){
-			producer = new KafkaProducer<String, String>(configProperties);
-			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python2500to10000", bodyString);
-			producer.send(rec);
-			producer.close();
-		}
-		
-
-		if(countFound > 10000){
-			producer = new KafkaProducer<String, String>(configProperties);
-			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python10000Above", bodyString);
-			producer.send(rec);
-			producer.close();
-		}
-		
-		if (jedis != null) {
-			jedis.close();
-		}
-		
-
-	}
+//	private void postData(String hostname,String bodyString) {
+//
+//		Properties configProperties = new Properties();
+//		configProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+//		configProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+//				"org.apache.kafka.common.serialization.StringSerializer");
+//		configProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+//				"org.apache.kafka.common.serialization.StringSerializer");
+//		configProperties.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+//		configProperties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
+//
+//		Producer<String, String> producer ;
+//		String foundHost = "FOUND" + hostname;
+//		Jedis jedis = null;
+//
+//		jedis = pool.getResource();
+//		Long countFound = jedis.scard(foundHost);
+//		if(countFound <= 500){
+//			producer = new KafkaProducer<String, String>(configProperties);
+//			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_pythonlessthan500", bodyString);
+//			producer.send(rec);
+//			producer.close();
+//			
+//		}
+//		
+//		if(countFound > 500 && countFound <=2500 ){
+//			producer = new KafkaProducer<String, String>(configProperties);
+//			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python500to2500", bodyString);
+//			producer.send(rec);
+//			producer.close();
+//		}
+//		
+//		if(countFound > 2500 && countFound <=10000 ){
+//			producer = new KafkaProducer<String, String>(configProperties);
+//			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python2500to10000", bodyString);
+//			producer.send(rec);
+//			producer.close();
+//		}
+//		
+//
+//		if(countFound > 10000){
+//			producer = new KafkaProducer<String, String>(configProperties);
+//			ProducerRecord<String, String> rec = new ProducerRecord<String, String>("storm_to_python10000Above", bodyString);
+//			producer.send(rec);
+//			producer.close();
+//		}
+//		
+//		if (jedis != null) {
+//			jedis.close();
+//		}
+//		
+//
+//	}
 
 	private void handleException(String url, Throwable e, Metadata metadata, Tuple tuple, String errorSource,
 			String errorMessage) {

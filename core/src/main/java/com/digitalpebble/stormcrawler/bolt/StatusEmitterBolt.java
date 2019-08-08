@@ -67,7 +67,7 @@ public abstract class StatusEmitterBolt extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream(
                 com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                new Fields("url", "metadata", "status"));
+                new Fields("url","metadata", "status"));
     }
 
     /** Used for redirections or when discovering sitemap URLs **/

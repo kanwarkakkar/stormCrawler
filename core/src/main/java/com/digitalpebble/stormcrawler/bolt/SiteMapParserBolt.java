@@ -90,8 +90,12 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
         // TODO check that we have the right number of fields?
         byte[] content = tuple.getBinaryByField("content");
         String url = tuple.getStringByField("url");
-
         String isSitemap = metadata.getFirstValue(isSitemapKey);
+        String[] projectIdArr = metadata.getValues("projectId");
+        String projectId= "dummy";
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        }  
         // doesn't have the metadata expected
         if (!Boolean.valueOf(isSitemap)) {
             int found = -1;
@@ -166,7 +170,9 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
 
         // send to status stream
         for (Outlink ol : outlinks) {
-            Values v = new Values(ol.getTargetURL(), ol.getMetadata(),
+        	Metadata metadataWithProjectId = (Metadata) ol.getMetadata();
+        	metadataWithProjectId.setValue("projectId", projectId);
+            Values v = new Values(ol.getTargetURL(), metadataWithProjectId,
                     Status.DISCOVERED);
             collector.emit(Constants.StatusStreamName, tuple, v);
         }
@@ -324,7 +330,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("url", "content", "metadata"));
+        declarer.declare(new Fields("url","content", "metadata"));
     }
 
 }

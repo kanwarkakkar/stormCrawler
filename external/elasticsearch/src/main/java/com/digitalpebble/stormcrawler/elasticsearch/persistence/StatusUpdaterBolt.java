@@ -259,42 +259,12 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             mdKey = mdKey.replaceAll("\\.", "%2E");
             builder.array(mdKey, values);
         }
-        
-       // Kanwar Adding new fields inComingLinks and inComingLinksCount
-//        Boolean checkKeyExists =  jedis.exists(url);
-//        String[] urlsInComing = metadata.getValues("url.path");
-//        if(urlsInComing != null)
-//        {
-//	        String urlToAppend = urlsInComing[urlsInComing.length -1];
-//	        if(!checkKeyExists){
-//	        	 if(urlToAppend != null)
-//	             	jedis.rpush(url, urlToAppend);
-//	        }else
-//	        {
-//	        	 List<String> urlsInComingList= jedis.lrange(url, 0, -1);
-//	          	 urlsInComingList.add(urlToAppend);
-//	        	 Set<String> hs = new HashSet<>();
-//	        	 
-//	        	 hs.addAll(urlsInComingList);
-//	        	 urlsInComingList.clear();
-//	        	 urlsInComingList.addAll(hs);
-//	        	 
-//	        	 
-//	      
-//	        	String[] urlsArray = urlsInComingList.toArray(new String[urlsInComingList.size()]);
-//	        
-//	        	jedis.del(url);
-//	        	for(int i = 0 ; i < urlsArray.length; i++){
-//	        		jedis.rpush(url, urlsArray[i]);
-//	        	}
-//	        	
-//	        	
-//	        }
-//	        List<String> urlsInComingListToAppend = jedis.lrange(url, 0, -1);
-//	        builder.array("inComingLinks",urlsInComingListToAppend.toArray(new String[urlsInComingListToAppend.size()]));
-//	        builder.field("inComingLinksCount", Integer.toString(urlsInComingListToAppend.size()));
-//        }
-       
+        String[] projectIdArr = metadata.getValues("projectId");
+        String projectId= "dummy";
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        } 
+        builder.field("projectId", projectId);
         // store routing key in metadata?
         if (StringUtils.isNotBlank(partitionKey)
                 && StringUtils.isNotBlank(fieldNameForRoutingKey)

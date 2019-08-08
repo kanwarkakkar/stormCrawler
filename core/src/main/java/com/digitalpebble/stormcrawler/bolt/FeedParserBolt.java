@@ -246,7 +246,7 @@ public class FeedParserBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("url", "content", "metadata"));
+        declarer.declare(new Fields("url","content", "metadata"));
     }
 
 }

@@ -165,7 +165,7 @@ public class HostURLFilter implements URLFilter {
 
 				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
 				if (defaultLimitOfCrawl == null) {
-					defaultLimitOfCrawl = "100";
+					defaultLimitOfCrawl = "500";
 				}
 
 				if (!jedis.sismember(coveredHostUrls, urlToFilter)) {

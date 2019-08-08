@@ -56,9 +56,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import crawlercommons.robots.BaseRobotRules;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import crawlercommons.domains.PaidLevelDomain;
 
 
@@ -98,8 +95,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     private ProtocolFactory protocolFactory;
 
     private int taskID = -1;
-    private Jedis jedis ;
- 
+   
 
     boolean sitemapsAutoDiscovery = false;
 
@@ -137,7 +133,6 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
-    	jedis = new Jedis("localhost",6379);
     	
         super.prepare(stormConf, context, collector);
         this.conf = new Config();
@@ -344,28 +339,6 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
     					e.printStackTrace();
     				}
                 	
-    				
-    				
-    				String urlCountStr = jedis.hget(host,host);
-    				if(urlCountStr == null)
-    				{
-    					jedis.hset(host, host, "1");
-    				}else
-    				{
-    					jedis.hincrBy(host, host, 1);
-    				}
-                    String urlCount = jedis.hget(host,host);
-                    
-                    if(Integer.parseInt(urlCount)> 5000000)
-                    {
-                    	jedis.hincrBy(host, host, 1);
-                         metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
-                         collector.emit(
-                                 com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                                 input, new Values(urlString, metadata, Status.ERROR));
-                         collector.ack(input);
-                         return;
-                    }
                     
                 }
          
@@ -374,11 +347,6 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
          
             
             if(urlString.contains("#")){
-            	if(host != null)
-            	{
-            		if(Integer.parseInt(jedis.hget(host,host)) > -1)
-            			jedis.hincrBy(host, host, -1);
-            	}
             	
             	  metadata.setValue(Constants.STATUS_ERROR_CAUSE, "DISCOVERED");
                   collector.emit(
@@ -427,15 +395,9 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
             		hostUrl = host;
             	}
             	
-            	if(host != null){
-            		if(Integer.parseInt(jedis.hget(host,host)) > -1)
-            			jedis.hincrBy(host, host, -1);
-            	}
+            	
           
-          
-            	  String project_id = jedis.hget(hostUrl,"project_id");
-            	  //postRequestToMeteorIfError(hostUrl,urlString,project_id,Integer.toString(response.getStatusCode())); //Kanwar: Rest Request to Meteor Side When there is error in Status Code
-            }
+                }
             
             response.getMetadata().setValue("fetch.statusCode",
                     Integer.toString(response.getStatusCode()));

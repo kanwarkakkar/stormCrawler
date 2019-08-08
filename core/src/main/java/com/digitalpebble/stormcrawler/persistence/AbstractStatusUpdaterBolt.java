@@ -109,10 +109,11 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-
+    	 LOG.info("*********** {}execute log info tupletupletupletupletuple  *********", tuple);
         String url = tuple.getStringByField("url");
         Status status = (Status) tuple.getValueByField("status");
-
+        
+      
         boolean potentiallyNew = status.equals(Status.DISCOVERED);
 
         // if the URL is a freshly discovered one
@@ -131,7 +132,13 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
         }
 
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-
+        String[] projectIdArr = metadata.getValues("projectId");
+        String projectId= "dummy";
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        } 
+        LOG.info("*********** {} not in *********", projectId);
+        LOG.info("*****processed--****** {} not in ****processed*****", metadata);
         // store last processed or discovery date
         final String nowAsString = dateFormat.format(new Date());
         if (status.equals(Status.DISCOVERED)) {
@@ -172,11 +179,13 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
         // filter metadata just before storing it, so that non-persisted
         // metadata is available to fetch schedulers
         metadata = mdTransfer.filter(metadata);
+        metadata.setValue("projectId", projectId);
 
         // extensions of this class will handle the storage
         // on a per document basis
-
+        
         try {
+       LOG.info("*********** {}Calling log info storeeee  *********", metadata);
             store(url, status, metadata, nextFetch);
         } catch (Exception e) {
             LOG.error("Exception caught when storing", e);

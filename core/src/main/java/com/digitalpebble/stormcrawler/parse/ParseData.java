@@ -22,6 +22,7 @@ import com.digitalpebble.stormcrawler.Metadata;
 public class ParseData {
     private byte[] content;
     private String text;
+    private String rawText;
     private Metadata metadata;
 
     public ParseData() {
@@ -45,9 +46,11 @@ public class ParseData {
     public Metadata getMetadata() {
         return metadata;
     }
-
     public void setText(String text) {
         this.text = text;
+    }
+    public void setRawText(String rawText) {
+        this.rawText = rawText;
     }
 
     public void setMetadata(Metadata metadata) {

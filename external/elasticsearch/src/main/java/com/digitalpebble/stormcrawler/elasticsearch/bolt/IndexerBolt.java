@@ -37,6 +37,7 @@ import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 
 import org.apache.storm.metric.api.MultiCountMetric;
+import org.apache.storm.shade.org.json.simple.JSONObject;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
@@ -120,7 +121,14 @@ public class IndexerBolt extends AbstractIndexerBolt {
 
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
         String text = tuple.getStringByField("text");
-
+        String[] projectIdArr = metadata.getValues("projectId");
+        String projectId= "dummy";
+        String domainName = metadata.getValues("hostname")[0];
+        
+        if(projectIdArr!=null && projectIdArr.length>0) {
+        	projectId = projectIdArr[0];
+        }  
+      
         boolean keep = filterDocument(metadata);
         if (!keep) {
             eventCounter.scope("Filtered").incrBy(1);
@@ -131,10 +139,14 @@ public class IndexerBolt extends AbstractIndexerBolt {
             _collector.ack(tuple);
             return;
         }
-
+        String endResult="dummy";
         try {
-        	String message = "Hello World!";
-        	connectionRMQ.getClient().basicPublish("", "kk", null, text.getBytes());
+        	JSONObject json = new JSONObject();
+        	json.put("projectId", projectId);
+        	json.put("body", text);
+        	json.put("domainName",domainName);
+        	endResult = json.toString();
+        	connectionRMQ.getClient().basicPublish("", "kk", null, endResult.getBytes());
             XContentBuilder builder = jsonBuilder().startObject();
 
             // display text of the document?
@@ -176,6 +188,7 @@ public class IndexerBolt extends AbstractIndexerBolt {
             connection.getProcessor().add(request.request());
 
             eventCounter.scope("Indexed").incrBy(1);
+            LOG.info("Indexed Indexed Indexed for: {} > {}", url, metadata);
 
             _collector.emit(StatusStreamName, tuple, new Values(url, metadata,
                     Status.FETCHED));

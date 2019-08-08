@@ -114,11 +114,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 	private int taskID = -1;
 
 	boolean sitemapsAutoDiscovery = false;
-	//private Jedis jedis;
 	private JedisPool pool;
 	private MultiReducedMetric perSecMetrics;
-	// private JedisPool Pool;
-
 	private File debugfiletrigger;
 
 	/** blocks the processing of new URLs if this value is reached **/
@@ -142,9 +139,9 @@ public class FetcherBolt extends StatusEmitterBolt {
 		}
 
 		/**
-		 * Create an item. Queue id will be created based on
-		 * <code>queueMode</code> argument, either as a protocol + hostname
-		 * pair, protocol + IP address pair or protocol+domain pair.
+		 * Create an item. Queue id will be created based on <code>queueMode</code>
+		 * argument, either as a protocol + hostname pair, protocol + IP address pair or
+		 * protocol+domain pair.
 		 */
 
 		public static FetchItem create(URL u, Tuple t, String queueMode) {
@@ -195,8 +192,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 
 	/**
 	 * This class handles FetchItems which come from the same host ID (be it a
-	 * proto/hostname or proto/IP pair). It also keeps track of requests in
-	 * progress and elapsed time between requests.
+	 * proto/hostname or proto/IP pair). It also keeps track of requests in progress
+	 * and elapsed time between requests.
 	 */
 	private static class FetchItemQueue {
 		Deque<FetchItem> queue = new LinkedBlockingDeque<>();
@@ -498,63 +495,55 @@ public class FetcherBolt extends StatusEmitterBolt {
 					perSecMetrics.scope("fetched_perSec").update(1);
 					eventCounter.scope("fetched").incrBy(1);
 					eventCounter.scope("bytes_fetched").incrBy(byteLength);
-
+					LOG.info("*************input in fetcherr bolt fitfit {} **********", fit);
+					LOG.info("*************input in fetcherr bolt fitfit {} **********", metadata);
+					
 					LOG.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, fit.url,
 							response.getStatusCode(), timeFetching);
 
-					if (response.getStatusCode() != 200) {
-						String hostUrl = "";
-						if (host == null) {
-
-							if (fit.t.contains("metadata")) {
-								metadata = (Metadata) fit.t.getValueByField("metadata");
-								hostUrl = metadata.getValues("hostname")[0];
-								// if(jedis.exists(hostUrl)){
-								// if(Integer.parseInt(jedis.hget(hostUrl,hostUrl))
-								// > -1)
-								// jedis.hincrBy(hostUrl, hostUrl, -1);
-								// }
-							}
-						} else {
-							hostUrl = host;
-							// if(jedis.exists(hostUrl)){
-							// if(Integer.parseInt(jedis.hget(hostUrl,hostUrl))
-							// > -1)
-							// jedis.hincrBy(hostUrl, hostUrl, -1);
-							// }
-
-						}
-
-						Jedis jedis = null;
-		try {
-			jedis = pool.getResource();
-String project_id = jedis.hget(hostUrl, "project_id");
-                                                postRequestToMeteorIfError(hostUrl, fit.url, project_id,
-                                                                Integer.toString(response.getStatusCode())); // Kanwar:
-                                                                                                                                                               	// Rest
-                                                                                                                                                               	// Request
-                                                                                                                                                               	// to
-                                                                                                                                                                // Meteor
-                                                                                                                                                                // Side
-		                                                                                                                                                                // When
-                                                                                                                                                                // there
-                                                                                                                                                                // is
-                                                                                                                                                                // error
-                                                                                                                                                                // in
-                                                                                                                                                                // Status
-                                                                                                                                                                // Code
-
-		if (jedis != null) {
-				jedis.close();
-			}
-		}catch(Exception e){
-
-if (jedis != null) {
-				jedis.close();
-			}
-		}
-
-					}
+//					if (response.getStatusCode() != 200) {
+//						String hostUrl = "";
+//						if (host == null) {
+//
+//							if (fit.t.contains("metadata")) {
+//								metadata = (Metadata) fit.t.getValueByField("metadata");
+//								hostUrl = metadata.getValues("hostname")[0];
+//							}
+//						} else {
+//							hostUrl = host;
+//
+//						}
+//
+//						Jedis jedis = null;
+//						try {
+//							//jedis = pool.getResource();
+//							//String project_id = jedis.hget(hostUrl, "project_id");
+//							//postRequestToMeteorIfError(hostUrl, fit.url, project_id,
+//								//	Integer.toString(response.getStatusCode())); // Kanwar:
+//																					// Rest
+//																					// Request
+//																					// to
+//																					// Meteor
+//																					// Side
+//																					// When
+//																					// there
+//																					// is
+//																					// error
+//																					// in
+//																					// Status
+//																					// Code
+//
+////							if (jedis != null) {
+////								jedis.close();
+////							}
+//						} catch (Exception e) {
+//
+//							if (jedis != null) {
+//								jedis.close();
+//							}
+//						}
+//
+//					}
 
 					response.getMetadata().setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
 
@@ -611,18 +600,10 @@ if (jedis != null) {
 						if (fit.t.contains("metadata")) {
 							metadata = (Metadata) fit.t.getValueByField("metadata");
 							hostUrl = metadata.getValues("hostname")[0];
-							// if(jedis.exists(hostUrl)){
-							// if(Integer.parseInt(jedis.hget(hostUrl,hostUrl))
-							// > -1)
-							// jedis.hincrBy(hostUrl, hostUrl, -1);
-							// }
+	
 						}
 					} else {
 						hostUrl = host;
-						// if(jedis.exists(host)){
-						// if(Integer.parseInt(jedis.hget(host,host)) > -1)
-						// jedis.hincrBy(host, host, -1);
-						// }
 					}
 
 					String message = exece.getMessage();
@@ -668,29 +649,28 @@ if (jedis != null) {
 	private void postRequestToMeteorIfError(String hostUrl, String urlString, String project_id, String responseCode) {
 
 		String bodyString = urlString + "!@#$" + hostUrl + "####" + project_id;
-		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest.post("http://localhost:3000/ErrorStatusUrls/" + responseCode + "")	
-				  .body(bodyString)
-			      .asStringAsync(new Callback<String>() {
+		Future<com.mashape.unirest.http.HttpResponse<String>> jsonResponse = Unirest
+				.post("http://localhost:3000/ErrorStatusUrls/" + responseCode + "").body(bodyString)
+				.asStringAsync(new Callback<String>() {
 
 					@Override
 					public void completed(com.mashape.unirest.http.HttpResponse<String> response) {
 						// TODO Auto-generated method stub
-						
+
 					}
 
 					@Override
 					public void failed(UnirestException e) {
 						// TODO Auto-generated method stub
-						
+
 					}
 
 					@Override
 					public void cancelled() {
 						// TODO Auto-generated method stub
-						
+
 					}
-				})	;
-	
+				});
 
 	}
 
@@ -710,9 +690,7 @@ if (jedis != null) {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		// Pool = new JedisPool(new JedisPoolConfig(), "localhost");
-		pool = new JedisPool(new JedisPoolConfig(), "localhost");
-		//jedis = new Jedis("localhost", 6379);
+		//pool = new JedisPool(new JedisPoolConfig(), "localhost");
 		super.prepare(stormConf, context, collector);
 
 		Config conf = new Config();
@@ -777,10 +755,9 @@ if (jedis != null) {
 		maxNumberURLsInQueues = ConfUtils.getInt(conf, "fetcher.max.urls.in.queues", -1);
 
 		/**
-		 * If set to a valid path e.g. /tmp/fetcher-dump-{port} on a worker
-		 * node, the content of the queues will be dumped to the logs for
-		 * debugging. The port number needs to match the one used by the
-		 * FetcherBolt instance.
+		 * If set to a valid path e.g. /tmp/fetcher-dump-{port} on a worker node, the
+		 * content of the queues will be dumped to the logs for debugging. The port
+		 * number needs to match the one used by the FetcherBolt instance.
 		 **/
 		String debugfiletriggerpattern = ConfUtils.getString(conf, "fetcherbolt.queue.debug.filepath");
 
@@ -794,7 +771,7 @@ if (jedis != null) {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		super.declareOutputFields(declarer);
-		declarer.declare(new Fields("url", "content", "metadata"));
+		declarer.declare(new Fields("url","content", "metadata"));
 	}
 
 	@Override
@@ -804,6 +781,7 @@ if (jedis != null) {
 
 	@Override
 	public void execute(Tuple input) {
+		LOG.info("*************input in fetche bolt {} **********", input);
 		boolean toomanyurlsinqueues = false;
 		do {
 			if (this.maxNumberURLsInQueues != -1
@@ -848,7 +826,7 @@ if (jedis != null) {
 			// Report to status stream and ack
 			metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 			collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
-					new Values(urlString, metadata, Status.ERROR));
+					new Values(urlString,metadata, Status.ERROR));
 			collector.ack(input);
 			return;
 		}
