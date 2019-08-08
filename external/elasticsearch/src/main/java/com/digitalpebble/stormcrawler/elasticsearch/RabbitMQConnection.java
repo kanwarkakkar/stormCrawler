@@ -17,11 +17,7 @@
 
 package com.digitalpebble.stormcrawler.elasticsearch;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
@@ -42,15 +38,19 @@ public class RabbitMQConnection {
 	        return ChannelC;
 	  }
 	
-	public static RabbitMQConnection getChannel() {
+	public static RabbitMQConnection getChannel(Map stormConf) {
     	Channel channelRMQ = null;
         ConnectionFactory factory = new ConnectionFactory();
-    	factory.setHost("localhost");
-    	factory.setVirtualHost("foo");
+        String hostName = ConfUtils.getString(stormConf, "rmq.host","localhost");
+        String virtualHost = ConfUtils.getString(stormConf, "rmq.virtualhost","foo");
+        String queueName = ConfUtils.getString(stormConf, "rmq.queueName","kk");
+        
+    	factory.setHost(hostName);
+    	factory.setVirtualHost(virtualHost);
     	try{
     		Connection connection = factory.newConnection();
     		channelRMQ = connection.createChannel();
-    		channelRMQ.queueDeclare("kk", true, false, false, null);
+    		channelRMQ.queueDeclare(queueName, true, false, false, null);
     	}catch(Exception e) {
     	}
         return new RabbitMQConnection(channelRMQ);

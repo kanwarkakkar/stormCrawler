@@ -8,6 +8,12 @@ config:
   es.indexer.create: false
   es.indexer.settings:
     cluster.name: "elasticsearch"
+    
+  # RabbitMQ connection
+  rmq.host: "localhost"
+  rmq.virtualhost: "foo"
+  rmq.queueName: "kk"
+  redis.host : "localhost"
   
   # ES metricsConsumer
   es.metrics.addresses: "localhost:9300"

@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.bolt.FetcherBolt;
 import com.digitalpebble.stormcrawler.filtering.URLFilter;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -55,7 +56,9 @@ public class HostURLFilter implements URLFilter {
 
 	@Override
 	public void configure(Map stormConf, JsonNode filterParams) {
-		pool = new JedisPool(new JedisPoolConfig(), "localhost");
+
+        String jedisHostName = ConfUtils.getString(stormConf, "redis.host","localhost");
+		pool = new JedisPool(new JedisPoolConfig(), jedisHostName);
 
 		JsonNode filterByHostNode = filterParams.get("ignoreOutsideHost");
 		if (filterByHostNode == null) {

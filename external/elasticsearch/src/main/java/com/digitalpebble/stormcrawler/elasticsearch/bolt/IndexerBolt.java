@@ -63,6 +63,7 @@ public class IndexerBolt extends AbstractIndexerBolt {
 
     private String indexName;
     private String docType;
+    private String queueName;
     private boolean create = false;
 
     private MultiCountMetric eventCounter;
@@ -84,7 +85,7 @@ public class IndexerBolt extends AbstractIndexerBolt {
                 "doc");
         create = ConfUtils.getBoolean(conf, IndexerBolt.ESCreateParamName,
                 false);
-
+        queueName = ConfUtils.getString(conf, "rmq.queueName","kk");
         try {
             connection = ElasticSearchConnection
                     .getConnection(conf, ESBoltType);
@@ -94,7 +95,7 @@ public class IndexerBolt extends AbstractIndexerBolt {
         }
         try {
         	connectionRMQ = RabbitMQConnection
-                    .getChannel();
+                    .getChannel(conf);
         } catch (Exception e1) {
             LOG.error("Can't connect to RabbitMQ", e1);
             throw new RuntimeException(e1);
@@ -146,7 +147,8 @@ public class IndexerBolt extends AbstractIndexerBolt {
         	json.put("body", text);
         	json.put("domainName",domainName);
         	endResult = json.toString();
-        	connectionRMQ.getClient().basicPublish("", "kk", null, endResult.getBytes());
+        	LOG.info("Queue Name{}",queueName);
+        	connectionRMQ.getClient().basicPublish("", queueName, null, endResult.getBytes());
             XContentBuilder builder = jsonBuilder().startObject();
 
             // display text of the document?
@@ -188,7 +190,6 @@ public class IndexerBolt extends AbstractIndexerBolt {
             connection.getProcessor().add(request.request());
 
             eventCounter.scope("Indexed").incrBy(1);
-            LOG.info("Indexed Indexed Indexed for: {} > {}", url, metadata);
 
             _collector.emit(StatusStreamName, tuple, new Values(url, metadata,
                     Status.FETCHED));

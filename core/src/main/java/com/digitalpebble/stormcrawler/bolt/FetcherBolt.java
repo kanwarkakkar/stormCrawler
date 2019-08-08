@@ -74,9 +74,9 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.async.Callback;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
-import redis.clients.jedis.Jedis;
+//import redis.clients.jedis.JedisPool;
+//import redis.clients.jedis.JedisPoolConfig;
+//import redis.clients.jedis.Jedis;
 import crawlercommons.robots.BaseRobotRules;
 import crawlercommons.domains.PaidLevelDomain;
 
@@ -114,7 +114,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 	private int taskID = -1;
 
 	boolean sitemapsAutoDiscovery = false;
-	private JedisPool pool;
+//	private JedisPool pool;
 	private MultiReducedMetric perSecMetrics;
 	private File debugfiletrigger;
 

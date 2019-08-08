@@ -98,12 +98,12 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.async.Callback;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
-import redis.clients.jedis.Jedis;
+//import redis.clients.jedis.Jedis;
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.util.concurrent.Future;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+//import redis.clients.jedis.JedisPool;
+//import redis.clients.jedis.JedisPoolConfig;
 
 import kafka.*;
 
@@ -126,11 +126,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 	private Detector detector = TikaConfig.getDefaultConfig().getDetector();
 
 	private boolean detectMimeType = true;
-	private JedisPool pool;
+//	private JedisPool pool;
 	private boolean trackAnchors = true;
 
 	private boolean emitOutlinks = true;
-	private Jedis jedis;
+//	private Jedis jedis;
 	private boolean robots_noFollow_strict = true;
 
 	/**

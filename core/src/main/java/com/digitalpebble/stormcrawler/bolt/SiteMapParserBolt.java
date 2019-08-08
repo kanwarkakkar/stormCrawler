@@ -317,7 +317,8 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
     public void prepare(Map stormConf, TopologyContext context,
             OutputCollector collector) {
         super.prepare(stormConf, context, collector);
-        pool = new JedisPool(new JedisPoolConfig(), "localhost");
+        String jedisHostName = ConfUtils.getString(stormConf, "redis.host","localhost");
+        pool = new JedisPool(new JedisPoolConfig(), jedisHostName);
         sniffWhenNoSMKey = ConfUtils.getBoolean(stormConf,
                 "sitemap.sniffContent", false);
         filterHoursSinceModified = ConfUtils.getInt(stormConf,
