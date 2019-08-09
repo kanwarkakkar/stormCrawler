@@ -10,9 +10,9 @@ config:
     cluster.name: "elasticsearch"
     
   # RabbitMQ connection
-  rmq.host: "localhost"
-  rmq.virtualhost: "foo"
-  rmq.queueName: "kk"
+  rmq.host: "35.202.240.75"
+  rmq.virtualhost: "vhostStorm"
+  rmq.queueName: "crawloutput"
   redis.host : "localhost"
   
   # ES metricsConsumer

@@ -42,8 +42,8 @@ public class RabbitMQConnection {
     	Channel channelRMQ = null;
         ConnectionFactory factory = new ConnectionFactory();
         String hostName = ConfUtils.getString(stormConf, "rmq.host","localhost");
-        String virtualHost = ConfUtils.getString(stormConf, "rmq.virtualhost","foo");
-        String queueName = ConfUtils.getString(stormConf, "rmq.queueName","kk");
+        String virtualHost = ConfUtils.getString(stormConf, "rmq.virtualhost","defaultvHost");
+        String queueName = ConfUtils.getString(stormConf, "rmq.queueName","defaultQueue");
         
     	factory.setHost(hostName);
     	factory.setVirtualHost(virtualHost);

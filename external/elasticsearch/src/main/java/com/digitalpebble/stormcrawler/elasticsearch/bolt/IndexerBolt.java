@@ -35,6 +35,7 @@ import com.digitalpebble.stormcrawler.elasticsearch.RabbitMQConnection;
 import com.digitalpebble.stormcrawler.indexing.AbstractIndexerBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.esotericsoftware.minlog.Log;
 
 import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.shade.org.json.simple.JSONObject;
@@ -148,7 +149,12 @@ public class IndexerBolt extends AbstractIndexerBolt {
         	json.put("domainName",domainName);
         	endResult = json.toString();
         	LOG.info("Queue Name{}",queueName);
-        	connectionRMQ.getClient().basicPublish("", queueName, null, endResult.getBytes());
+        	try {
+            	connectionRMQ.getClient().basicPublish("", queueName, null, endResult.getBytes());
+        	}catch(IOException e) {
+        		 LOG.error("Error sending rabbit", e);
+        		 
+        	}
             XContentBuilder builder = jsonBuilder().startObject();
 
             // display text of the document?
