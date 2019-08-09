@@ -56,6 +56,7 @@ public class SiteMapParserBoltTest extends ParsingTester {
         metadata.setValue(SiteMapParserBolt.isSitemapKey, "true");
         // and its mime-type
         metadata.setValue(HttpHeaders.CONTENT_TYPE, "application/xml");
+        metadata.setValue("projectId", "13");
 
         parse("http://www.digitalpebble.com/sitemap.xml",
                 "digitalpebble.sitemap.xml", metadata);
@@ -83,7 +84,7 @@ public class SiteMapParserBoltTest extends ParsingTester {
 
         parse("http://www.digitalpebble.com/sitemap.xml",
                 "digitalpebble.sitemap.xml", metadata);
-
+        metadata.setValue("projectId", "13");
         Assert.assertEquals(6, output.getEmitted(Constants.StatusStreamName)
                 .size());
         // TODO test that the new links have the right metadata

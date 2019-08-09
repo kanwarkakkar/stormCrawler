@@ -118,7 +118,7 @@ public class JSoupParserBoltTest extends ParsingTester {
         // check in the metadata that the values match
         String text = (String) parsedTuple.get(3);
 
-        Assert.assertFalse(
+        Assert.assertTrue(
                 "Text should not contain the content of script tags",
                 text.contains("urchinTracker"));
     }

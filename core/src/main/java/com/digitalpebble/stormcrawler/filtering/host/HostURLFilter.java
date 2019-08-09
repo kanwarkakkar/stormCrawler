@@ -96,6 +96,8 @@ public class HostURLFilter implements URLFilter {
 
 		String fromHost;
 		String fromDomain = null;
+		
+	        
 		// Using identity comparison because URL.equals performs poorly
 		if (sourceUrl == previousSourceUrl) {
 			fromHost = previousSourceHost;
@@ -134,39 +136,44 @@ public class HostURLFilter implements URLFilter {
 		}
 
 		Jedis jedis = null;
+		String[] projectIdArr = sourceMetadata.getValues("projectId");
+	    String projectId= fromHost;
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        }  
 		try {
 			jedis = pool.getResource();
-			if (fromHost != null) {
 
-				try {
-					URL baseUrl = new URL(sourceMetadata.getValues("url.path")[0]);
-					String hostNameInternal = baseUrl.getHost();
-					fromHost = hostNameInternal;
-				} catch (Exception e) {
-				}
-
-				String urlCountStr = jedis.hget(fromHost, fromHost);
+//				try {
+//					URL baseUrl = new URL(sourceMetadata.getValues("url.path")[0]);
+//					String hostNameInternal = baseUrl.getHost();
+//					fromHost = hostNameInternal;
+//				} catch (Exception e) {
+//				}
+				
+			
+				String urlCountStr = jedis.hget(projectId, projectId);
 				if (urlCountStr == null) {
-					jedis.hset(fromHost, fromHost, "1");
+					jedis.hset(projectId, projectId, "1");
 					urlCountStr = "1";
 				}
 
 				Integer urlCount = Integer.parseInt(urlCountStr);
 				if (urlCount <= 1) {
 
-					jedis.hset(fromHost, "foundUrls", "1");
+					jedis.hset(projectId, "foundUrls", "1");
 				}
-				String foundHost = "FOUND" + fromHost;
-				String coveredHostUrls = "coveredHostUrls" + fromHost;
+				String foundHost = "FOUND" + projectId;
+				String coveredHostUrls = "coveredHostUrls" + projectId;
 				if (!urlToFilter.endsWith(".xml")) {
 					if (!urlToFilter.endsWith(".gz")) {
 						jedis.sadd(foundHost, urlToFilter);
 					}
 				}
 
-				jedis.hset(fromHost, "foundUrls", jedis.scard(foundHost).toString());
+				jedis.hset(projectId, "foundUrls", jedis.scard(foundHost).toString());
 
-				String defaultLimitOfCrawl = jedis.get("defaultLimit" + fromHost);
+				String defaultLimitOfCrawl = jedis.get("defaultLimit" + projectId);
 				if (defaultLimitOfCrawl == null) {
 					defaultLimitOfCrawl = "500";
 				}
@@ -183,7 +190,7 @@ public class HostURLFilter implements URLFilter {
 						jedis.sadd(coveredHostUrls, urlToFilter);
 						if (!urlToFilter.endsWith(".xml")) {
 
-							jedis.hincrBy(fromHost, fromHost, 1);
+							jedis.hincrBy(projectId, projectId, 1);
 						}
 					}
 				} else {
@@ -192,8 +199,6 @@ public class HostURLFilter implements URLFilter {
 					else
 						return null;
 				}
-
-			}
 		} finally {
 			if (jedis != null) {
 				jedis.close();

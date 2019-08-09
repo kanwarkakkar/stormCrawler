@@ -360,7 +360,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		parseData.setMetadata(metadata);
 		parseData.setText(text);
 		parseData.setContent(content);
-//		parseData.setRawText(bodyString);
+		parseData.setRawText(bodyString);
 
 		// apply the parse filters if any
 		try {
@@ -388,7 +388,7 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 			ParseData parseDoc = doc.getValue();
 			LOG.info("ack {} in ParseDataParseDataParseData ack", parseDoc.getMetadata());
 			collector.emit(tuple,
-					new Values(doc.getKey(), parseDoc.getContent(), parseDoc.getMetadata(), parseDoc.getText()));
+					new Values(doc.getKey(), parseDoc.getContent(), parseDoc.getMetadata(), parseDoc.getRawText()));
 		}
 	
 		collector.ack(tuple);

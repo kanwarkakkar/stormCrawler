@@ -42,6 +42,10 @@ public class ParseData {
     public String getText() {
         return text;
     }
+    
+    public String getRawText() {
+        return rawText;
+    }
 
     public Metadata getMetadata() {
         return metadata;

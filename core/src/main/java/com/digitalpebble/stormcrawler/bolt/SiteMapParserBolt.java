@@ -204,7 +204,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
         }
 
         List<Outlink> links = new ArrayList<>();
-
+        
         if (siteMap.isIndex()) {
             SiteMapIndex smi = (SiteMapIndex) siteMap;
             Collection<AbstractSiteMap> subsitemaps = smi.getSitemaps();
@@ -232,8 +232,13 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                 }
             	
             	try {
-					String foundHost = parentMetadata.getValues("hostname")[0];
-					foundHost = "sitemap" + foundHost;
+            		String foundHost = parentMetadata.getValues("hostname")[0];
+                    String[] projectIdArr = parentMetadata.getValues("projectId");
+                    String projectId= foundHost;
+                    if(projectIdArr !=null && projectIdArr.length> 0) {
+                    	projectId = projectIdArr[0];
+                    }  
+					foundHost = "sitemap" + projectId;
 					if (!target.endsWith(".xml")) {
 						if (!target.endsWith(".gz")) {
 							jedis.sadd(foundHost, target);
@@ -283,8 +288,13 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                     }
                 }
             	try {
-					String foundHost = parentMetadata.getValues("hostname")[0];
-					foundHost = "sitemap" + foundHost;
+            		String foundHost = parentMetadata.getValues("hostname")[0];
+                    String[] projectIdArr = parentMetadata.getValues("projectId");
+                    String projectId= foundHost;
+                    if(projectIdArr !=null && projectIdArr.length> 0) {
+                    	projectId = projectIdArr[0];
+                    } 
+					foundHost = "sitemap" + projectId;
 					if (!target.endsWith(".xml")) {
 						if (!target.endsWith(".gz")) {
 							jedis.sadd(foundHost, target);

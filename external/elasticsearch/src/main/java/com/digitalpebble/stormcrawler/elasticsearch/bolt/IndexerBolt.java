@@ -145,8 +145,9 @@ public class IndexerBolt extends AbstractIndexerBolt {
         try {
         	JSONObject json = new JSONObject();
         	json.put("projectId", projectId);
-        	json.put("body", text);
+        	json.put("html", text);
         	json.put("domainName",domainName);
+        	json.put("page",url);
         	endResult = json.toString();
         	LOG.info("Queue Name{}",queueName);
         	try {
