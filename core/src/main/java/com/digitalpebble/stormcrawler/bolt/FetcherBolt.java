@@ -452,6 +452,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 					// as well.
 					if (sitemapsAutoDiscovery) {
 						for (String sitemapURL : rules.getSitemaps()) {
+							LOG.info("****{} emitOutlink emitOutlink emitOutlink", metadata);
 							emitOutlink(fit.t, URL, sitemapURL, metadata, SiteMapParserBolt.isSitemapKey, "true");
 						}
 					}
@@ -460,6 +461,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 						LOG.info("Denied by robots.txt: {}", fit.url);
 						// pass the info about denied by robots
 						metadata.setValue(Constants.STATUS_ERROR_CAUSE, "robots.txt");
+					
 						collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
 								new Values(fit.url, metadata, Status.ERROR));
 						continue;
@@ -495,7 +497,6 @@ public class FetcherBolt extends StatusEmitterBolt {
 					perSecMetrics.scope("fetched_perSec").update(1);
 					eventCounter.scope("fetched").incrBy(1);
 					eventCounter.scope("bytes_fetched").incrBy(byteLength);
-					LOG.info("*************input in fetcherr bolt fitfit {} **********", fit);
 					LOG.info("*************input in fetcherr bolt fitfit {} **********", metadata);
 					
 					LOG.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, fit.url,
@@ -593,7 +594,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 					}
 
 				} catch (Exception exece) {
-
+					LOG.info("****{} Exception Exception isAlExceptionlowed", metadata);
+					
 					String hostUrl = "";
 					if (host == null) {
 
@@ -639,6 +641,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 					fetchQueues.finishFetchItem(fit, asap);
 					activeThreads.decrementAndGet(); // count threads
 					// ack it whatever happens
+					LOG.info("****{} activeThreads activeThreads activeThreads", metadata);
+					
 					collector.ack(fit.t);
 				}
 			}
@@ -819,6 +823,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 		} catch (MalformedURLException e) {
 			LOG.error("{} is a malformed URL", urlString);
 
+			LOG.info("****{} is a malformed URL", urlString);
 			Metadata metadata = (Metadata) input.getValueByField("metadata");
 			if (metadata == null) {
 				metadata = new Metadata();

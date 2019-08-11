@@ -338,7 +338,8 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 				if (allowRedirs() && StringUtils.isNotBlank(redirection)) {
 					emitOutlink(tuple, new URL(url), redirection, metadata);
 				}
-
+				metadata.setValue("projectId", projectId);
+				
 				// Mark URL as redirected
 				collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, tuple,
 						new Values(url, metadata, Status.REDIRECTION));
@@ -373,11 +374,11 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 
 		if (emitOutlinks) {
 			for (Outlink outlink : parse.getOutlinks()) {
-				Metadata metadataNew = (Metadata) outlink.getMetadata();
-				metadataNew.setValue("projectId", projectId);
-				// LOG.info("ack {} in OutlinkOutlinkOutlinkOutlinkOutlink ack", metadataNew);
+				Metadata metadataMofified = (Metadata) outlink.getMetadata();
+				metadataMofified.setValue("projectId", projectId);
+				// LOG.info("ack {} in OutlinkOutlinkOutlinkOutlinkOutlink ack", metadataMofified);
 				collector.emit(StatusStreamName, tuple,
-						new Values(outlink.getTargetURL(), metadataNew, Status.DISCOVERED));
+						new Values(outlink.getTargetURL(), metadataMofified, Status.DISCOVERED));
 			}
 		}
 
@@ -386,7 +387,10 @@ public class JSoupParserBolt extends StatusEmitterBolt {
 		//postData( hostname, bodyString);
 		for (Map.Entry<String, ParseData> doc : parse) {
 			ParseData parseDoc = doc.getValue();
-			LOG.info("ack {} in ParseDataParseDataParseData ack", parseDoc.getMetadata());
+			Metadata metadataMofified = (Metadata) parseDoc.getMetadata();
+			metadataMofified.setValue("projectId", projectId);
+			
+			LOG.info("ack {} in ParseDataParseDataParseData ack", metadataMofified);
 			collector.emit(tuple,
 					new Values(doc.getKey(), parseDoc.getContent(), parseDoc.getMetadata(), parseDoc.getRawText()));
 		}

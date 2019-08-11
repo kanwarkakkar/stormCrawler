@@ -164,7 +164,7 @@ public class HostURLFilter implements URLFilter {
 					jedis.hset(projectId, "foundUrls", "1");
 				}
 				String foundHost = "FOUND" + projectId;
-				String coveredHostUrls = "coveredHostUrls" + projectId;
+				String covered = "covered" + projectId;
 				if (!urlToFilter.endsWith(".xml")) {
 					if (!urlToFilter.endsWith(".gz")) {
 						jedis.sadd(foundHost, urlToFilter);
@@ -178,7 +178,7 @@ public class HostURLFilter implements URLFilter {
 					defaultLimitOfCrawl = "500";
 				}
 
-				if (!jedis.sismember(coveredHostUrls, urlToFilter)) {
+				if (!jedis.sismember(covered, urlToFilter)) {
 
 					if (urlCount > Integer.parseInt(defaultLimitOfCrawl)) {
 						if (urlToFilter.endsWith(".xml") || urlToFilter.endsWith(".gz") || urlToFilter.contains(".bms"))
@@ -187,7 +187,7 @@ public class HostURLFilter implements URLFilter {
 							return null;
 
 					} else {
-						jedis.sadd(coveredHostUrls, urlToFilter);
+						jedis.sadd(covered, urlToFilter);
 						if (!urlToFilter.endsWith(".xml")) {
 
 							jedis.hincrBy(projectId, projectId, 1);

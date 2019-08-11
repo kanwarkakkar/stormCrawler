@@ -145,6 +145,11 @@ public class MetadataTransfer {
      **/
     public Metadata getMetaForOutlink(String targetURL, String sourceURL,
             Metadata parentMD) {
+    	String[] projectIdArr = parentMD.getValues("projectId");
+        String projectId= "dummy";
+        if(projectIdArr !=null && projectIdArr.length> 0) {
+        	projectId = projectIdArr[0];
+        } 
         Metadata md = _filter(parentMD, mdToTransfer);
 
         // keep the path?
@@ -163,7 +168,7 @@ public class MetadataTransfer {
             }
             md.setValue(depthKeyName, Integer.toString(++depth));
         }
-
+        md.setValue("projectId", projectId);
         return md;
     }
 
